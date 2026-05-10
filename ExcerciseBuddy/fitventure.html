@@ -1,0 +1,2772 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>FitVenture · 校园灵兽</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<style>
+:root{
+  --sunset-1:#FFD89B; --sunset-2:#FFB672; --sunset-3:#FF7E5F;
+  --cy-1:#7DD3FC; --cy-2:#38BDF8; --cy-3:#0EA5E9; --cy-4:#0284C7;
+  --cy-glow:rgba(56,189,248,.55);
+  --bg-0:#050912; --bg-1:#0B1426; --bg-2:#101B33; --bg-3:#162242;
+  --glass:rgba(255,255,255,.05); --glass-border:rgba(255,255,255,.10);
+  --t-1:#F8FAFC; --t-2:#CBD5E1; --t-3:#94A3B8; --t-4:#64748B;
+  --gold:#FBBF24; --gold-glow:rgba(251,191,36,.45);
+  --rose:#F472B6; --rose-glow:rgba(244,114,182,.45);
+  --mint:#34D399; --mint-glow:rgba(52,211,153,.45);
+  --violet:#A855F7; --violet-glow:rgba(168,85,247,.5);
+  --warn:#F87171;
+  --r-sm:10px; --r:14px; --r-lg:20px; --r-xl:26px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;overflow:hidden;}
+body{
+  font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+  background:radial-gradient(ellipse at 50% 0%, #1a2747 0%, #050912 70%);
+  color:var(--t-1);display:flex;justify-content:center;align-items:center;
+  -webkit-font-smoothing:antialiased;
+}
+#app{
+  width:100%;max-width:430px;height:100%;max-height:932px;
+  position:relative;display:flex;flex-direction:column;overflow:hidden;
+  background:var(--bg-0);
+}
+@media(min-width:432px){
+  #app{
+    border-radius:32px;height:min(932px,96vh);
+    box-shadow:0 0 1px rgba(56,189,248,.4),0 0 80px rgba(56,189,248,.18),0 0 200px rgba(255,182,114,.12),0 30px 80px rgba(0,0,0,.6);
+  }
+}
+#topbar{
+  position:absolute;top:0;left:0;right:0;z-index:100;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:max(14px,env(safe-area-inset-top)) 18px 10px;
+  background:linear-gradient(180deg,rgba(5,9,18,.6) 0%,transparent 100%);
+  backdrop-filter:blur(8px);pointer-events:none;
+}
+#topbar > *{pointer-events:auto;}
+.brand{
+  font-family:'Orbitron',sans-serif;font-weight:800;font-size:18px;letter-spacing:1px;
+  background:linear-gradient(100deg,var(--sunset-1) 0%,#fff 35%,var(--cy-1) 65%,var(--cy-2) 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 12px rgba(56,189,248,.35));
+}
+.brand-sub{font-size:9px;color:var(--t-3);letter-spacing:3px;margin-top:1px;font-weight:500;}
+.icons{display:flex;gap:6px;}
+.icon-btn{
+  width:34px;height:34px;border-radius:50%;border:1px solid var(--glass-border);
+  background:rgba(11,20,38,.55);backdrop-filter:blur(10px);
+  display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;
+  transition:all .2s;color:var(--t-2);
+}
+.icon-btn:hover{background:rgba(56,189,248,.2);border-color:var(--cy-2);color:var(--cy-1);}
+#tabs{flex:1;position:relative;overflow:hidden;}
+.panel{
+  position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
+  display:none;-webkit-overflow-scrolling:touch;padding-bottom:90px;
+}
+.panel.active{display:block;animation:fadeIn .3s ease;}
+.panel::-webkit-scrollbar{width:0;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* === HERO === */
+.hero{position:relative;width:100%;height:42vh;min-height:300px;max-height:380px;overflow:hidden;}
+.hero-img{
+  position:absolute;inset:0;
+  background-image:url('游戏主宣传图.png');
+  background-size:cover;background-position:center 30%;z-index:1;
+}
+.hero-vignette{
+  position:absolute;inset:0;z-index:2;
+  background:radial-gradient(ellipse at 50% 30%,transparent 30%,rgba(5,9,18,.5) 90%),
+    linear-gradient(180deg,transparent 0%,transparent 55%,rgba(5,9,18,.85) 88%,var(--bg-0) 100%);
+}
+.pin{
+  position:absolute;z-index:5;display:inline-flex;align-items:center;gap:6px;
+  padding:5px 10px 5px 7px;font-size:10px;font-weight:600;color:var(--cy-1);letter-spacing:.5px;
+  background:rgba(11,20,38,.65);border:1px solid var(--cy-2);border-radius:99px;
+  backdrop-filter:blur(10px);
+  box-shadow:0 0 16px rgba(56,189,248,.5),inset 0 0 12px rgba(56,189,248,.15);
+  animation:float 3.4s ease-in-out infinite;
+}
+.pin .dot{width:6px;height:6px;border-radius:50%;background:var(--cy-1);box-shadow:0 0 10px var(--cy-1);animation:pulseDot 1.4s ease-in-out infinite;}
+.pin.warm{color:var(--sunset-1);border-color:var(--sunset-2);box-shadow:0 0 16px rgba(255,182,114,.5);}
+.pin.warm .dot{background:var(--sunset-1);box-shadow:0 0 10px var(--sunset-1);}
+.pin.violet{color:#E0B4FF;border-color:var(--violet);box-shadow:0 0 16px rgba(168,85,247,.5);}
+.pin.violet .dot{background:#E0B4FF;box-shadow:0 0 10px #E0B4FF;}
+.pin-1{top:14%;left:5%;animation-delay:0s;}
+.pin-2{top:24%;right:5%;animation-delay:.8s;}
+.pin-3{top:46%;left:7%;animation-delay:1.6s;}
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-5px);}}
+@keyframes pulseDot{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.5);opacity:.6;}}
+.hero-player{position:absolute;top:60px;left:18px;z-index:5;display:flex;align-items:center;gap:8px;}
+.hp-avatar{
+  width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,var(--cy-2),var(--sunset-2));
+  display:flex;align-items:center;justify-content:center;font-size:15px;
+  border:2px solid var(--cy-1);box-shadow:0 0 12px var(--cy-glow);
+}
+.hp-text{font-size:11px;line-height:1.2;}
+.hp-name{font-weight:700;color:#fff;}
+.hp-meta{color:var(--t-3);font-size:9px;letter-spacing:1px;}
+.twin-banner{
+  position:absolute;left:50%;bottom:14%;transform:translateX(-50%);z-index:6;
+  display:flex;align-items:center;gap:10px;padding:8px 16px;
+  background:linear-gradient(135deg,rgba(56,189,248,.18),rgba(11,20,38,.85));
+  border:1px solid var(--cy-2);border-radius:99px;backdrop-filter:blur(16px);
+  box-shadow:0 0 28px rgba(56,189,248,.5);white-space:nowrap;
+}
+.tb-pulse{width:8px;height:8px;border-radius:50%;background:var(--cy-1);box-shadow:0 0 10px var(--cy-1);animation:pulseDot 1.6s ease-in-out infinite;}
+.tb-label{font-size:10px;color:var(--t-3);letter-spacing:1px;}
+.tb-name{font-size:13px;font-weight:700;color:var(--cy-1);letter-spacing:1px;}
+
+/* IoT status (top right corner of hero) */
+.iot-status{
+  position:absolute;top:60px;right:18px;z-index:5;
+  display:flex;align-items:center;gap:6px;
+  padding:5px 10px 5px 7px;
+  background:rgba(11,20,38,.7);
+  border:1px solid var(--mint);
+  border-radius:99px;
+  backdrop-filter:blur(10px);
+  font-size:9px;font-weight:600;color:var(--mint);
+}
+.iot-status.disconnected{border-color:var(--t-4);color:var(--t-3);}
+.iot-dot{width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:0 0 6px var(--mint);animation:pulseDot 2s ease-in-out infinite;}
+.iot-status.disconnected .iot-dot{background:var(--t-4);box-shadow:none;animation:none;}
+
+/* === BODY CONTENT === */
+.body-content{padding:0 14px;margin-top:-30px;position:relative;z-index:10;}
+.sec-title{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  font-size:11px;font-weight:700;color:var(--t-3);
+  letter-spacing:2px;text-transform:uppercase;margin:18px 4px 10px;
+}
+.sec-title .lbl{display:flex;align-items:center;gap:10px;}
+.sec-title .lbl::before{content:'';width:18px;height:2px;background:linear-gradient(90deg,var(--cy-1),transparent);border-radius:2px;}
+.sec-title .ext{color:var(--cy-1);font-size:10px;letter-spacing:1px;cursor:pointer;text-transform:none;font-weight:500;}
+.sec-sub{font-size:10px;color:var(--t-4);margin:-4px 4px 12px;}
+
+/* Twin form attribute card */
+.twin-attrs{
+  padding:14px 16px;
+  background:linear-gradient(135deg,rgba(56,189,248,.18) 0%,rgba(11,20,38,.6) 60%,rgba(255,182,114,.08) 100%);
+  border:1px solid rgba(56,189,248,.3);
+  border-radius:var(--r-lg);position:relative;overflow:hidden;
+}
+.twin-attrs::before{content:'';position:absolute;right:-30px;top:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(255,182,114,.25),transparent 65%);pointer-events:none;}
+.ta-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.ta-form{font-size:18px;font-weight:900;color:var(--cy-1);letter-spacing:.5px;}
+.ta-tag{font-size:10px;padding:3px 9px;background:rgba(255,255,255,.06);border:1px solid var(--glass-border);border-radius:99px;color:var(--t-2);}
+.ta-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px;}
+.ta-stat{text-align:center;}
+.ta-sn{font-size:9px;color:var(--t-3);margin-bottom:3px;}
+.ta-sv{font-size:14px;font-weight:800;color:var(--cy-1);}
+.ta-stat.power .ta-sv{color:var(--rose);}
+.ta-stat.bal .ta-sv{color:var(--gold);}
+.ta-stat.recv .ta-sv{color:var(--mint);}
+.ta-stat.streak .ta-sv{color:#C084FC;}
+
+/* Status bars (HP / 体力 / 意志) */
+.status-bars{margin-top:12px;display:flex;flex-direction:column;gap:6px;}
+.sb-row{display:flex;align-items:center;gap:8px;}
+.sb-icon{width:14px;font-size:11px;text-align:center;}
+.sb-name{width:36px;font-size:10px;color:var(--t-3);}
+.sb-bar{flex:1;height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;}
+.sb-fill{height:100%;border-radius:3px;transition:width .8s;}
+.sb-fill.hp{background:linear-gradient(90deg,var(--mint),#10B981);box-shadow:0 0 6px rgba(52,211,153,.5);}
+.sb-fill.stamina{background:linear-gradient(90deg,var(--cy-1),var(--cy-3));box-shadow:0 0 6px rgba(56,189,248,.5);}
+.sb-fill.power{background:linear-gradient(90deg,var(--rose),#DB2777);box-shadow:0 0 6px rgba(244,114,182,.5);}
+.sb-fill.fatigue{background:linear-gradient(90deg,var(--mint) 0%,var(--gold) 60%,var(--warn) 100%);}
+.sb-num{font-size:10px;color:var(--t-2);width:42px;text-align:right;font-variant-numeric:tabular-nums;}
+
+/* Equipment slots */
+.equip-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.equip-slot{
+  padding:10px 12px;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--glass-border);
+  border-radius:var(--r);
+  display:flex;align-items:center;gap:10px;
+  cursor:pointer;transition:all .2s;
+}
+.equip-slot:hover{border-color:var(--cy-2);background:rgba(56,189,248,.06);}
+.equip-slot.locked{opacity:.55;}
+.equip-slot.special{
+  background:linear-gradient(135deg,rgba(251,191,36,.1),rgba(255,255,255,.02));
+  border-color:rgba(251,191,36,.3);
+}
+.eq-ic{
+  width:34px;height:34px;flex-shrink:0;border-radius:8px;
+  background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.3);
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.equip-slot.special .eq-ic{background:rgba(251,191,36,.15);border-color:rgba(251,191,36,.4);}
+.equip-slot.empty .eq-ic{background:rgba(255,255,255,.04);border-style:dashed;color:var(--t-4);}
+.eq-info{flex:1;min-width:0;}
+.eq-slot{font-size:9px;color:var(--t-4);text-transform:uppercase;letter-spacing:1px;}
+.eq-name{font-size:12px;font-weight:700;color:var(--t-1);}
+.equip-slot.empty .eq-name{color:var(--t-4);font-weight:400;}
+.eq-lv{font-size:9px;color:var(--cy-1);margin-top:1px;}
+
+/* === EXPLORE === */
+.std-header{padding:max(70px,calc(env(safe-area-inset-top) + 64px)) 16px 4px;}
+.std-title{font-size:22px;font-weight:900;letter-spacing:1px;}
+.std-title .accent{
+  background:linear-gradient(90deg,var(--cy-1),var(--sunset-1));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.std-sub{font-size:11px;color:var(--t-3);margin-top:4px;}
+
+/* Today metrics strip */
+.today-strip{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:12px 14px 0;
+  padding:10px;
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--glass-border);
+  border-radius:var(--r);
+}
+.ts-item{text-align:center;}
+.ts-v{font-size:14px;font-weight:800;color:var(--cy-1);}
+.ts-v.gold{color:var(--gold);}
+.ts-v.rose{color:var(--rose);}
+.ts-v.mint{color:var(--mint);}
+.ts-n{font-size:8.5px;color:var(--t-3);margin-top:2px;letter-spacing:.5px;}
+
+.map-wrap{
+  margin:12px 14px;height:340px;position:relative;
+  background:linear-gradient(180deg,#1a2747,#0a1228);
+  border-radius:var(--r-xl);overflow:hidden;
+  border:1px solid rgba(56,189,248,.25);
+  box-shadow:inset 0 0 80px rgba(56,189,248,.1),0 12px 32px rgba(0,0,0,.5);
+}
+#campus-map{width:100%;height:100%;background:#0a1228;}
+.leaflet-container{background:#0a1228 !important;font-family:inherit !important;}
+.leaflet-control-attribution{
+  background:rgba(11,20,38,.7) !important;
+  color:var(--t-3) !important;font-size:8px !important;
+}
+.leaflet-control-attribution a{color:var(--cy-1) !important;}
+
+/* Custom Leaflet markers */
+.fv-marker{display:flex;flex-direction:column;align-items:center;cursor:pointer;}
+.fv-marker-pin{
+  width:34px;height:34px;border-radius:50%;
+  background:rgba(11,20,38,.85);
+  border:2px solid var(--cy-2);
+  display:flex;align-items:center;justify-content:center;font-size:17px;
+  box-shadow:0 0 14px var(--cy-glow);
+  animation:markerPulse 2.4s ease-in-out infinite;
+  transition:transform .2s;
+}
+.fv-marker:hover .fv-marker-pin{transform:scale(1.1);}
+.fv-marker-pin.gold{border-color:var(--gold);box-shadow:0 0 14px var(--gold-glow);}
+.fv-marker-pin.rose{border-color:var(--rose);box-shadow:0 0 14px var(--rose-glow);}
+.fv-marker-pin.violet{border-color:var(--violet);box-shadow:0 0 14px var(--violet-glow);}
+.fv-marker-pin.mint{border-color:var(--mint);box-shadow:0 0 14px var(--mint-glow);}
+@keyframes markerPulse{0%,100%{box-shadow:0 0 12px currentColor;}50%{box-shadow:0 0 20px currentColor,0 0 32px rgba(56,189,248,.3);}}
+.fv-marker-label{
+  margin-top:3px;
+  background:rgba(11,20,38,.85);
+  border:1px solid var(--cy-2);
+  color:var(--cy-1);
+  padding:2px 7px;border-radius:99px;
+  font-size:9.5px;font-weight:700;
+  white-space:nowrap;backdrop-filter:blur(6px);
+}
+.fv-marker-pin.gold + .fv-marker-label{border-color:var(--gold);color:var(--gold);}
+.fv-marker-pin.rose + .fv-marker-label{border-color:var(--rose);color:var(--rose);}
+.fv-marker-pin.violet + .fv-marker-label{border-color:var(--violet);color:#E0B4FF;}
+.fv-marker-pin.mint + .fv-marker-label{border-color:var(--mint);color:var(--mint);}
+/* Wild encounter marker */
+.fv-wild{display:flex;flex-direction:column;align-items:center;cursor:pointer;}
+.fv-wild-pin{
+  width:30px;height:30px;border-radius:50%;
+  background:radial-gradient(circle,rgba(168,85,247,.4),rgba(11,20,38,.9));
+  border:2px solid var(--violet);
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+  box-shadow:0 0 18px var(--violet-glow),inset 0 0 8px rgba(168,85,247,.2);
+  animation:wildBounce 1.8s ease-in-out infinite;
+}
+@keyframes wildBounce{0%,100%{transform:translateY(0) scale(1);}50%{transform:translateY(-4px) scale(1.05);}}
+.fv-wild-tag{
+  margin-top:2px;font-size:8.5px;color:var(--violet);
+  background:rgba(11,20,38,.85);border:1px solid var(--violet);
+  padding:1px 6px;border-radius:99px;font-weight:700;
+}
+/* Friend marker */
+.fv-friend{display:flex;flex-direction:column;align-items:center;cursor:pointer;}
+.fv-friend-pin{
+  width:28px;height:28px;border-radius:50%;
+  background:linear-gradient(135deg,var(--mint),#10B981);
+  border:2px solid #fff;
+  display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;font-weight:700;
+  box-shadow:0 0 12px var(--mint-glow);
+}
+/* Player marker */
+.fv-player-pin{
+  width:24px;height:24px;border-radius:50%;
+  background:var(--gold);border:3px solid #fff;
+  box-shadow:0 0 18px var(--gold-glow),0 0 36px var(--gold-glow);
+  animation:playerPulse 1.6s ease-in-out infinite;
+}
+@keyframes playerPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.2);}}
+
+/* Map overlay action bar */
+.map-actions{
+  position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:1000;
+  display:flex;gap:6px;
+  padding:6px;
+  background:rgba(11,20,38,.85);
+  border:1px solid rgba(56,189,248,.3);
+  border-radius:99px;
+  backdrop-filter:blur(16px);
+  box-shadow:0 8px 24px rgba(0,0,0,.4);
+}
+.map-action{
+  padding:8px 14px;font-family:inherit;cursor:pointer;
+  background:transparent;border:none;color:var(--t-2);
+  font-size:11px;font-weight:600;border-radius:99px;
+  display:flex;align-items:center;gap:5px;transition:all .2s;
+}
+.map-action:hover{background:rgba(56,189,248,.15);color:var(--cy-1);}
+.map-action.primary{background:linear-gradient(135deg,var(--cy-2),var(--cy-3));color:#fff;box-shadow:0 4px 12px rgba(56,189,248,.4);}
+
+/* Encounter banner (Pokemon GO style alert) */
+.encounter-banner{
+  margin:0 14px 12px;padding:14px 16px;
+  background:linear-gradient(135deg,rgba(168,85,247,.25),rgba(244,114,182,.18));
+  border:1px solid rgba(168,85,247,.5);
+  border-radius:var(--r-lg);
+  display:flex;align-items:center;gap:14px;
+  box-shadow:0 0 28px rgba(168,85,247,.25);
+  cursor:pointer;animation:encounterPulse 2.2s ease-in-out infinite;
+}
+@keyframes encounterPulse{0%,100%{box-shadow:0 0 22px rgba(168,85,247,.25);}50%{box-shadow:0 0 36px rgba(168,85,247,.45);}}
+.eb-emoji{
+  width:54px;height:54px;flex-shrink:0;border-radius:50%;
+  background:radial-gradient(circle,rgba(168,85,247,.5),rgba(11,20,38,.5));
+  border:2px solid var(--violet);
+  display:flex;align-items:center;justify-content:center;font-size:30px;
+  box-shadow:0 0 20px rgba(168,85,247,.5);
+  animation:wildBounce 1.6s ease-in-out infinite;
+}
+.eb-info{flex:1;min-width:0;}
+.eb-tag{font-size:9px;color:var(--violet);letter-spacing:1px;font-weight:700;margin-bottom:3px;}
+.eb-name{font-size:15px;font-weight:800;letter-spacing:.5px;margin-bottom:3px;}
+.eb-meta{font-size:10px;color:var(--t-3);}
+.eb-go{
+  padding:7px 14px;font-size:11px;font-weight:700;letter-spacing:.5px;
+  background:linear-gradient(135deg,var(--violet),#D946EF);
+  color:#fff;border:none;border-radius:99px;cursor:pointer;font-family:inherit;
+  box-shadow:0 4px 14px rgba(168,85,247,.4);
+}
+
+/* Quick workout buttons (Pokemon Go style action bar) */
+.workout-bar{
+  margin:0 14px 12px;padding:10px;
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--glass-border);border-radius:var(--r-lg);
+  display:grid;grid-template-columns:repeat(3,1fr);gap:6px;
+}
+.wb-btn{
+  padding:10px 4px;border:1px solid rgba(56,189,248,.3);
+  background:rgba(56,189,248,.08);border-radius:var(--r);
+  color:var(--t-1);font-family:inherit;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  transition:all .2s;
+}
+.wb-btn:hover{border-color:var(--cy-1);background:rgba(56,189,248,.18);transform:translateY(-2px);}
+.wb-btn.power{border-color:rgba(244,114,182,.3);background:rgba(244,114,182,.08);}
+.wb-btn.power:hover{border-color:var(--rose);background:rgba(244,114,182,.18);}
+.wb-btn.recv{border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.08);}
+.wb-btn.recv:hover{border-color:var(--mint);background:rgba(52,211,153,.18);}
+.wb-ic{font-size:18px;}
+.wb-txt{font-size:10.5px;font-weight:700;letter-spacing:.5px;}
+
+/* Online players strip */
+.online-strip{
+  margin:0 14px 12px;padding:10px 12px;
+  background:rgba(52,211,153,.06);
+  border:1px solid rgba(52,211,153,.2);border-radius:var(--r);
+  display:flex;align-items:center;gap:10px;
+}
+.os-text{flex:1;font-size:11px;color:var(--t-2);}
+.os-text b{color:var(--mint);}
+.os-avatars{display:flex;gap:-4px;}
+.os-av{
+  width:24px;height:24px;border-radius:50%;
+  border:2px solid var(--bg-1);
+  display:flex;align-items:center;justify-content:center;font-size:11px;
+  margin-left:-6px;
+}
+.os-av:first-child{margin-left:0;}
+.os-av.wind{background:linear-gradient(135deg,var(--cy-2),var(--cy-4));}
+.os-av.iron{background:linear-gradient(135deg,var(--rose),#BE185D);}
+.os-av.hybrid{background:linear-gradient(135deg,var(--gold),#D97706);}
+
+/* === PETS PAGE === */
+.pet-bag{padding:0 14px;}
+.pet-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.pet-card{
+  padding:12px 8px;border-radius:var(--r);cursor:pointer;
+  background:linear-gradient(180deg,rgba(56,189,248,.12),rgba(11,20,38,.7));
+  border:1px solid rgba(56,189,248,.3);
+  position:relative;overflow:hidden;text-align:center;
+  transition:all .2s;
+}
+.pet-card:hover{transform:translateY(-2px);border-color:var(--cy-1);box-shadow:0 6px 18px rgba(56,189,248,.3);}
+.pet-card.main{
+  background:linear-gradient(180deg,rgba(251,191,36,.18) 0%,rgba(56,189,248,.12) 60%,rgba(11,20,38,.7) 100%);
+  border-color:rgba(251,191,36,.5);
+  box-shadow:0 0 22px rgba(251,191,36,.25);
+}
+.pet-card.power{background:linear-gradient(180deg,rgba(244,114,182,.12),rgba(11,20,38,.7));border-color:rgba(244,114,182,.3);}
+.pet-card.balance{background:linear-gradient(180deg,rgba(168,85,247,.12),rgba(11,20,38,.7));border-color:rgba(168,85,247,.3);}
+.pet-card.locked{opacity:.45;}
+.pet-card .badge-main{
+  position:absolute;top:6px;right:6px;
+  font-size:8px;padding:2px 6px;
+  background:var(--gold);color:#0a1228;border-radius:99px;font-weight:800;letter-spacing:.5px;
+}
+.pet-em{
+  width:64px;height:64px;margin:0 auto 7px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.3) 0%,rgba(56,189,248,.3) 30%,transparent 75%);
+  display:flex;align-items:center;justify-content:center;font-size:34px;
+  filter:drop-shadow(0 0 10px rgba(56,189,248,.6));
+  position:relative;overflow:hidden;
+}
+.pet-em.img{
+  background-size:cover;background-position:center top;
+  border:2px solid rgba(56,189,248,.55);
+  box-shadow:0 0 14px rgba(56,189,248,.5),inset 0 0 12px rgba(0,0,0,.2);
+  font-size:0;
+}
+.pet-card.power .pet-em.img{border-color:rgba(244,114,182,.55);box-shadow:0 0 14px rgba(244,114,182,.5);}
+.pet-card.balance .pet-em.img{border-color:rgba(168,85,247,.55);box-shadow:0 0 14px rgba(168,85,247,.5);}
+.pet-card.main .pet-em.img{border-color:var(--gold);box-shadow:0 0 16px var(--gold-glow),inset 0 0 12px rgba(0,0,0,.25);}
+.pet-card.power .pet-em{filter:drop-shadow(0 0 10px rgba(244,114,182,.6));}
+.pet-card.balance .pet-em{filter:drop-shadow(0 0 10px rgba(168,85,247,.6));}
+.pet-card.main .pet-em{filter:drop-shadow(0 0 14px rgba(251,191,36,.7));}
+.pet-card.locked .pet-em{filter:grayscale(1) brightness(.4);}
+.pet-card-n{font-size:11px;font-weight:700;color:var(--t-1);margin-bottom:3px;}
+.pet-card-meta{font-size:9px;color:var(--t-3);}
+.pet-card-tend{
+  display:inline-block;margin-top:4px;
+  font-size:8.5px;padding:1.5px 6px;
+  background:rgba(56,189,248,.15);color:var(--cy-1);
+  border-radius:99px;border:1px solid rgba(56,189,248,.25);
+}
+.pet-card.power .pet-card-tend{background:rgba(244,114,182,.15);color:var(--rose);border-color:rgba(244,114,182,.25);}
+.pet-card.balance .pet-card-tend{background:rgba(168,85,247,.15);color:#C084FC;border-color:rgba(168,85,247,.25);}
+.pet-card.main .pet-card-tend{background:rgba(251,191,36,.15);color:var(--gold);border-color:rgba(251,191,36,.25);}
+
+/* Pet detail card */
+.pet-detail{
+  margin:14px 14px;padding:18px;
+  background:linear-gradient(135deg,rgba(56,189,248,.18) 0%,rgba(168,85,247,.12) 50%,rgba(251,191,36,.1) 100%);
+  border:1px solid rgba(56,189,248,.3);
+  border-radius:var(--r-xl);position:relative;overflow:hidden;
+}
+.pet-detail::before{content:'';position:absolute;width:180px;height:180px;right:-40px;top:-40px;background:radial-gradient(circle,rgba(251,191,36,.25),transparent 65%);pointer-events:none;}
+.pd-row{display:flex;gap:14px;align-items:center;position:relative;}
+.pd-portrait{
+  width:90px;height:90px;flex-shrink:0;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.4) 0%,rgba(56,189,248,.4) 30%,transparent 75%);
+  display:flex;align-items:center;justify-content:center;font-size:50px;
+  filter:drop-shadow(0 0 16px rgba(56,189,248,.7));animation:floatPet 3s ease-in-out infinite;
+  position:relative;overflow:hidden;
+}
+.pd-portrait.img{
+  background-size:cover;background-position:center top;
+  border:2px solid var(--gold);
+  box-shadow:0 0 20px var(--gold-glow),inset 0 0 16px rgba(0,0,0,.25);
+  font-size:0;
+}
+@keyframes floatPet{0%,100%{transform:translateY(0);}50%{transform:translateY(-4px);}}
+.pd-info{flex:1;}
+.pd-n{font-size:20px;font-weight:900;letter-spacing:.5px;}
+.pd-meta{font-size:11px;color:var(--t-2);margin:3px 0 8px;}
+.pd-bond{
+  display:inline-flex;align-items:center;gap:6px;padding:3px 11px;
+  font-size:10.5px;font-weight:700;color:var(--gold);
+  background:rgba(251,191,36,.15);border:1px solid rgba(251,191,36,.4);border-radius:99px;
+}
+.pd-status{display:flex;flex-direction:column;gap:5px;margin-top:14px;}
+
+/* Tendency bars (vague — no explicit % per user request) */
+.tend-card{
+  margin:0 14px 12px;padding:14px;
+  background:rgba(255,255,255,.035);border:1px solid var(--glass-border);border-radius:var(--r);
+}
+.tend-row{display:flex;align-items:center;gap:8px;font-size:11px;margin-bottom:8px;}
+.tend-row:last-child{margin-bottom:0;}
+.tend-icon{width:18px;font-size:14px;}
+.tend-name{width:60px;color:var(--t-2);}
+.tend-bar{flex:1;height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;}
+.tend-fill{height:100%;border-radius:3px;transition:width .8s;}
+.tend-fill.wind{background:linear-gradient(90deg,var(--cy-2),#93C5FD);box-shadow:0 0 6px rgba(56,189,248,.5);}
+.tend-fill.iron{background:linear-gradient(90deg,var(--rose),#FBA5C5);box-shadow:0 0 6px rgba(244,114,182,.5);}
+.tend-fill.hybrid{background:linear-gradient(90deg,var(--gold),#FCD34D);box-shadow:0 0 6px rgba(251,191,36,.5);}
+.tend-tag{font-size:10px;color:var(--t-3);width:60px;text-align:right;}
+
+/* Hidden form section — vaguer hints */
+.hf-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px;}
+.hf-card{
+  padding:14px 10px;border-radius:var(--r);cursor:pointer;
+  background:linear-gradient(180deg,rgba(124,58,237,.18),rgba(11,20,38,.85));
+  border:1px solid rgba(168,85,247,.3);position:relative;overflow:hidden;transition:all .3s;
+}
+.hf-card:hover{border-color:var(--violet);box-shadow:0 0 22px rgba(168,85,247,.4);transform:translateY(-2px);}
+.hf-sil{
+  width:54px;height:54px;margin:0 auto 8px;border-radius:50%;
+  background:rgba(0,0,0,.55);border:1px solid rgba(168,85,247,.4);
+  display:flex;align-items:center;justify-content:center;font-size:24px;
+  color:rgba(168,85,247,.8);position:relative;
+}
+.hf-sil::after{
+  content:'?';position:absolute;font-size:30px;font-weight:900;color:rgba(255,255,255,.85);
+  text-shadow:0 0 12px var(--violet);
+}
+.hf-card.found .hf-sil::after{display:none;}
+.hf-card.found .hf-sil{background:rgba(168,85,247,.25);}
+.hf-name{font-size:11.5px;font-weight:700;text-align:center;margin-bottom:5px;color:var(--t-2);}
+.hf-card.found .hf-name{color:var(--t-1);}
+.hf-clue{font-size:9px;color:var(--t-3);text-align:center;font-style:italic;line-height:1.5;min-height:25px;}
+.hf-prog{
+  margin-top:6px;display:flex;align-items:center;gap:5px;
+  font-size:9px;color:var(--violet);
+}
+.hf-pbar{flex:1;height:3px;background:rgba(0,0,0,.5);border-radius:2px;overflow:hidden;}
+.hf-pfill{height:100%;background:linear-gradient(90deg,var(--violet),#D946EF);border-radius:2px;}
+
+/* === FRIENDS PAGE === */
+.fr-card{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 14px;margin:0 14px 8px;
+  background:rgba(255,255,255,.035);border:1px solid var(--glass-border);
+  border-radius:var(--r);transition:all .2s;
+}
+.fr-card.online{border-color:rgba(52,211,153,.35);}
+.fr-card.rec{
+  background:linear-gradient(135deg,rgba(251,191,36,.12) 0%,rgba(244,114,182,.05) 100%);
+  border-color:rgba(251,191,36,.4);box-shadow:0 0 20px rgba(251,191,36,.12);
+}
+.fr-av{
+  width:46px;height:46px;flex-shrink:0;border-radius:50%;position:relative;
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+  border:2px solid rgba(255,255,255,.15);
+}
+.fr-av.wind{background:linear-gradient(135deg,var(--cy-2),var(--cy-4));box-shadow:0 0 12px rgba(56,189,248,.5);}
+.fr-av.iron{background:linear-gradient(135deg,var(--rose),#BE185D);box-shadow:0 0 12px rgba(244,114,182,.5);}
+.fr-av.hybrid{background:linear-gradient(135deg,var(--gold),#D97706);box-shadow:0 0 12px rgba(251,191,36,.5);}
+.fr-card.online .fr-av::after{
+  content:'';position:absolute;bottom:0;right:0;
+  width:12px;height:12px;border-radius:50%;background:var(--mint);
+  border:2px solid var(--bg-1);box-shadow:0 0 8px var(--mint);
+}
+.fr-info{flex:1;min-width:0;}
+.fr-row1{display:flex;align-items:center;gap:8px;}
+.fr-n{font-size:13.5px;font-weight:700;}
+.fr-form-tag{font-size:9px;padding:1px 7px;border-radius:99px;color:var(--cy-1);background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.25);}
+.fr-st{font-size:10.5px;color:var(--t-3);margin-top:2px;}
+.fr-st.online{color:var(--mint);}
+.fr-btn{
+  padding:7px 12px;font-size:10.5px;font-weight:700;letter-spacing:.5px;
+  background:linear-gradient(135deg,var(--cy-2),var(--cy-3));
+  color:#fff;border:none;border-radius:99px;cursor:pointer;font-family:inherit;
+  box-shadow:0 4px 12px rgba(56,189,248,.4);transition:all .2s;
+}
+.fr-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(56,189,248,.55);}
+.fr-btn.invited{background:rgba(255,255,255,.08);color:var(--t-3);box-shadow:none;cursor:default;}
+
+/* Boss / faction band */
+.boss{
+  margin:14px;padding:18px;
+  background:linear-gradient(135deg,rgba(244,114,182,.22),rgba(168,85,247,.18) 60%,rgba(11,20,38,.6));
+  border:1px solid rgba(244,114,182,.45);
+  border-radius:var(--r-xl);position:relative;overflow:hidden;
+  box-shadow:0 0 28px rgba(244,114,182,.15);
+}
+.boss::before{content:'';position:absolute;width:140px;height:140px;right:-30px;top:-30px;background:radial-gradient(circle,rgba(244,114,182,.4),transparent 65%);pointer-events:none;}
+.boss-tag{display:inline-block;padding:3px 11px;background:rgba(244,114,182,.25);border:1px solid rgba(244,114,182,.5);border-radius:99px;font-size:10px;color:var(--rose);font-weight:700;letter-spacing:1px;margin-bottom:8px;}
+.boss-n{font-size:18px;font-weight:900;letter-spacing:.5px;margin-bottom:4px;}
+.boss-time{font-size:11px;color:var(--t-2);margin-bottom:12px;}
+.boss-team{display:flex;gap:6px;flex-wrap:wrap;}
+.tn{font-size:10px;padding:4px 10px;border-radius:99px;font-weight:600;background:rgba(255,255,255,.05);border:1px solid var(--glass-border);color:var(--t-2);}
+.tn.ok{border-color:var(--mint);color:var(--mint);background:rgba(52,211,153,.1);}
+
+/* Bond progress */
+.bond-card{
+  margin:0 14px 12px;padding:14px;
+  background:linear-gradient(135deg,rgba(168,85,247,.15) 0%,rgba(11,20,38,.7) 100%);
+  border:1px solid rgba(168,85,247,.4);border-radius:var(--r);
+}
+.bond-t{font-size:12px;font-weight:700;color:#D946EF;margin-bottom:4px;letter-spacing:.5px;}
+.bond-d{font-size:10px;color:var(--t-3);margin-bottom:12px;line-height:1.6;}
+.bond-pg{display:flex;gap:6px;}
+.bond-step{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.08);}
+.bond-step.done{background:linear-gradient(90deg,var(--violet),#D946EF);box-shadow:0 0 6px rgba(168,85,247,.6);}
+.bond-step.pending{background:linear-gradient(90deg,rgba(168,85,247,.5),rgba(217,70,239,.5));animation:pendPulse 1.4s ease-in-out infinite;}
+@keyframes pendPulse{0%,100%{opacity:.4;}50%{opacity:1;}}
+
+#bottomnav{
+  position:absolute;bottom:0;left:0;right:0;display:flex;
+  background:rgba(11,20,38,.85);
+  backdrop-filter:blur(24px);
+  border-top:1px solid rgba(56,189,248,.18);
+  padding:8px 0 max(8px,env(safe-area-inset-bottom));z-index:50;
+}
+.nav-i{
+  flex:1;background:none;border:none;color:var(--t-3);
+  font-family:inherit;font-size:10px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:6px 0;transition:color .2s;
+}
+.nav-i .nav-ic{font-size:22px;line-height:1;transition:filter .25s;}
+.nav-i .nav-l{font-weight:700;letter-spacing:1px;}
+.nav-i.active{color:var(--cy-1);}
+.nav-i.active .nav-ic{filter:drop-shadow(0 0 8px var(--cy-glow));}
+
+/* Modal & toast */
+#mask{position:fixed;inset:0;z-index:1000;display:none;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);justify-content:center;align-items:flex-end;}
+#mask.show{display:flex;}
+.modal{
+  width:100%;max-width:430px;
+  background:linear-gradient(180deg,var(--bg-2),var(--bg-1));
+  border-top:1px solid rgba(56,189,248,.4);
+  border-radius:var(--r-xl) var(--r-xl) 0 0;
+  padding:18px 18px max(20px,env(safe-area-inset-bottom));
+  box-shadow:0 -12px 40px rgba(0,0,0,.6);
+  animation:slideUp .35s cubic-bezier(.4,0,.2,1);
+  max-height:88vh;overflow-y:auto;
+}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.modal::-webkit-scrollbar{width:0;}
+.handle{width:42px;height:4px;background:rgba(255,255,255,.2);border-radius:2px;margin:0 auto 14px;}
+.modal h2{font-size:18px;font-weight:900;margin-bottom:6px;}
+.modal-tag{display:inline-block;padding:3px 10px;background:rgba(56,189,248,.2);border:1px solid rgba(56,189,248,.4);color:var(--cy-1);border-radius:99px;font-size:10px;font-weight:700;letter-spacing:1px;margin-bottom:10px;}
+.modal-tag.rose{background:rgba(244,114,182,.2);border-color:rgba(244,114,182,.45);color:var(--rose);}
+.modal-tag.violet{background:rgba(168,85,247,.2);border-color:rgba(168,85,247,.45);color:#C084FC;}
+.modal-tag.gold{background:rgba(251,191,36,.2);border-color:rgba(251,191,36,.45);color:var(--gold);}
+.modal-tag.mint{background:rgba(52,211,153,.2);border-color:rgba(52,211,153,.45);color:var(--mint);}
+.modal-desc{font-size:13px;color:var(--t-2);line-height:1.65;margin-bottom:14px;}
+.modal-quote{padding:10px 14px;font-style:italic;background:rgba(168,85,247,.08);border-left:3px solid var(--violet);border-radius:0 8px 8px 0;font-size:12.5px;color:var(--t-2);margin-bottom:14px;line-height:1.7;}
+.rew-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+.rew-i{padding:9px 10px;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:var(--r-sm);font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px;color:var(--t-2);}
+.modal-cta{width:100%;padding:13px;font-size:14px;font-weight:700;letter-spacing:1px;background:linear-gradient(135deg,var(--cy-2),var(--cy-3));color:#fff;border:none;border-radius:99px;cursor:pointer;font-family:inherit;box-shadow:0 6px 22px rgba(56,189,248,.45);transition:all .2s;}
+.modal-cta:hover{transform:translateY(-1px);box-shadow:0 8px 28px rgba(56,189,248,.6);}
+.modal-cta.warn{background:linear-gradient(135deg,var(--rose),#DB2777);box-shadow:0 6px 22px rgba(244,114,182,.45);}
+.modal-cta.violet{background:linear-gradient(135deg,var(--violet),#D946EF);box-shadow:0 6px 22px rgba(168,85,247,.45);}
+.modal-2nd{width:100%;padding:11px;background:transparent;border:1px solid var(--glass-border);color:var(--t-2);border-radius:99px;font-size:13px;cursor:pointer;font-family:inherit;margin-top:8px;}
+.modal-2nd:hover{background:rgba(255,255,255,.05);}
+
+/* Capture-specific modal styles */
+.cap-hero{
+  margin:0 -18px 16px;padding:24px 18px;
+  background:radial-gradient(ellipse at center,rgba(168,85,247,.3),rgba(11,20,38,0));
+  text-align:center;
+}
+.cap-em{
+  width:100px;height:100px;margin:0 auto 8px;border-radius:50%;
+  background:radial-gradient(circle,rgba(168,85,247,.5),rgba(11,20,38,.5));
+  border:2px solid var(--violet);
+  display:flex;align-items:center;justify-content:center;font-size:60px;
+  box-shadow:0 0 32px rgba(168,85,247,.6);
+  animation:wildBounce 1.6s ease-in-out infinite;
+}
+.cap-name{font-size:20px;font-weight:900;margin-bottom:4px;}
+.cap-meta{font-size:11px;color:var(--t-3);}
+.cap-rate{
+  margin:0 0 12px;padding:10px 14px;
+  background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);
+  border-radius:var(--r);
+}
+.cap-rate-label{font-size:11px;color:var(--t-3);display:flex;justify-content:space-between;margin-bottom:6px;}
+.cap-rate-bar{height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;}
+.cap-rate-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--mint),var(--gold));}
+
+#rewardpop{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.7);
+  padding:24px 26px;min-width:300px;max-width:88vw;
+  background:linear-gradient(135deg,var(--bg-2),var(--bg-1));
+  border:1.5px solid var(--gold);border-radius:var(--r-lg);
+  z-index:1500;display:none;text-align:center;
+  box-shadow:0 0 60px rgba(251,191,36,.4);
+}
+#rewardpop.show{display:block;animation:rewardIn .5s cubic-bezier(.4,0,.2,1) forwards;}
+@keyframes rewardIn{0%{transform:translate(-50%,-50%) scale(.7);opacity:0;}60%{transform:translate(-50%,-50%) scale(1.05);}100%{transform:translate(-50%,-50%) scale(1);opacity:1;}}
+.rp-title{font-size:18px;font-weight:900;color:var(--gold);letter-spacing:2px;margin-bottom:14px;text-shadow:0 0 18px rgba(251,191,36,.5);}
+.rp-list{text-align:left;margin-bottom:14px;}
+.rp-line{font-size:12px;padding:6px 0;display:flex;justify-content:space-between;border-bottom:1px dashed rgba(255,255,255,.08);}
+.rp-line:last-child{border:none;}
+.rp-line .v{font-weight:700;}
+.rp-line.up .v{color:var(--mint);}
+.rp-line.dn .v{color:var(--warn);}
+.rp-line.cy .v{color:var(--cy-1);}
+.rp-line.gd .v{color:var(--gold);}
+.rp-line.vi .v{color:#D946EF;}
+.rp-close{padding:9px 26px;border:none;cursor:pointer;font-family:inherit;background:linear-gradient(135deg,var(--cy-2),var(--cy-3));color:#fff;border-radius:99px;font-size:12px;font-weight:700;letter-spacing:1px;}
+
+#toast{
+  position:fixed;top:18%;left:50%;transform:translateX(-50%) translateY(-12px);
+  padding:11px 18px;background:rgba(11,20,38,.95);border:1px solid var(--mint);
+  border-radius:14px;font-size:12px;font-weight:600;
+  z-index:2000;opacity:0;pointer-events:none;
+  transition:all .4s;text-align:center;max-width:88%;
+  box-shadow:0 8px 32px rgba(52,211,153,.3);
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+::-webkit-scrollbar{width:0;}
+.priv{text-align:center;font-size:9px;color:var(--t-4);padding:14px 16px;letter-spacing:.5px;}
+
+/* === 角色成长系统 (Role Growth System) === */
+.rg-header{
+  position:relative;
+  padding:max(70px,calc(env(safe-area-inset-top) + 64px)) 18px 0;
+  display:flex;flex-direction:column;align-items:center;
+  text-align:center;
+}
+.rg-title{
+  font-size:19px;font-weight:900;letter-spacing:2px;
+  background:linear-gradient(100deg,var(--cy-1) 0%,#fff 50%,var(--sunset-1) 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 14px rgba(56,189,248,.45));
+  white-space:nowrap;
+}
+.rg-sub{font-size:10.5px;color:var(--t-3);margin-top:6px;letter-spacing:.5px;text-align:center;}
+
+.iot-badge{
+  position:static !important;
+  display:inline-flex;align-items:center;gap:6px;
+  margin:10px 0 0;
+  padding:5px 12px 5px 9px;
+  background:rgba(11,20,38,.7);border:1px solid var(--mint);
+  border-radius:99px;backdrop-filter:blur(10px);
+  font-size:10px;font-weight:600;color:var(--mint);
+  align-self:center;
+}
+.iot-badge::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--mint);box-shadow:0 0 6px var(--mint);animation:pulseDot 2s ease-in-out infinite;}
+.iot-badge.disconnected{border-color:var(--t-4);color:var(--t-3);}
+.iot-badge.disconnected::before{background:var(--t-4);box-shadow:none;animation:none;}
+
+/* Character portrait card (uses 主角图.png) */
+.char-portrait{
+  margin:14px 14px 0;position:relative;
+  border-radius:var(--r-xl);overflow:hidden;
+  border:1px solid rgba(56,189,248,.4);
+  background:radial-gradient(ellipse at 50% 80%,rgba(56,189,248,.18) 0%,rgba(11,20,38,.6) 60%,rgba(5,9,18,.95) 100%);
+  box-shadow:0 16px 40px rgba(0,0,0,.55),0 0 60px rgba(56,189,248,.15);
+  cursor:pointer;
+  display:flex;justify-content:center;align-items:flex-end;
+  padding-top:48px;padding-bottom:60px;
+  min-height:480px;
+}
+.char-portrait .pev-tag{top:14px;left:14px;}
+.char-portrait .pev-corner.tl,.char-portrait .pev-corner.tr,
+.char-portrait .pev-corner.bl,.char-portrait .pev-corner.br{z-index:4;}
+.cp-aura{
+  position:absolute;left:50%;bottom:8%;transform:translateX(-50%);
+  width:60%;height:14%;
+  background:radial-gradient(ellipse,rgba(56,189,248,.45),transparent 65%);
+  filter:blur(14px);pointer-events:none;
+}
+.cp-img{
+  display:block;height:auto;max-height:420px;width:auto;
+  max-width:100%;
+  filter:drop-shadow(0 0 18px rgba(56,189,248,.5));
+  position:relative;z-index:2;
+}
+.cp-name-tag{
+  position:absolute;bottom:12px;left:50%;transform:translateX(-50%);
+  z-index:3;display:inline-flex;align-items:center;gap:8px;
+  font-size:12px;font-weight:700;letter-spacing:.5px;
+  padding:6px 14px;background:rgba(11,20,38,.8);
+  border:1px solid var(--cy-2);border-radius:99px;
+  backdrop-filter:blur(10px);white-space:nowrap;
+  box-shadow:0 0 16px rgba(56,189,248,.3);
+}
+.cp-name-tag b{color:var(--cy-1);font-family:'Orbitron',sans-serif;letter-spacing:2px;font-weight:800;}
+.cp-name-tag span{color:var(--t-2);font-weight:500;}
+
+/* === Resource grid (4 cols) === */
+.res-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:7px;
+}
+.res{
+  padding:10px 4px;text-align:center;border-radius:var(--r-sm);
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--glass-border);
+  position:relative;overflow:hidden;
+  transition:all .2s;
+}
+.res:hover{transform:translateY(-2px);}
+.res-ic{font-size:18px;line-height:1;margin-bottom:3px;}
+.res-v{font-size:14px;font-weight:800;letter-spacing:.3px;font-family:'Orbitron',sans-serif;}
+.res-n{font-size:9px;color:var(--t-3);margin-top:2px;letter-spacing:.3px;}
+.res.gold{background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(255,255,255,.02));border-color:rgba(251,191,36,.3);}
+.res.gold .res-v{color:var(--gold);}
+.res.cyan{background:linear-gradient(135deg,rgba(56,189,248,.12),rgba(255,255,255,.02));border-color:rgba(56,189,248,.3);}
+.res.cyan .res-v{color:var(--cy-1);}
+.res.rose{background:linear-gradient(135deg,rgba(244,114,182,.12),rgba(255,255,255,.02));border-color:rgba(244,114,182,.3);}
+.res.rose .res-v{color:var(--rose);}
+.res.mint{background:linear-gradient(135deg,rgba(52,211,153,.12),rgba(255,255,255,.02));border-color:rgba(52,211,153,.3);}
+.res.mint .res-v{color:var(--mint);}
+.res.violet{background:linear-gradient(135deg,rgba(168,85,247,.12),rgba(255,255,255,.02));border-color:rgba(168,85,247,.3);}
+.res.violet .res-v{color:#C084FC;}
+
+/* Character panel (sci-fi viewer with corner brackets) */
+.char-panel{
+  margin:14px 14px 0;padding:16px;
+  background:
+    radial-gradient(ellipse at 50% 0%,rgba(56,189,248,.18) 0%,rgba(11,20,38,.4) 60%),
+    linear-gradient(180deg,rgba(11,20,38,.85),rgba(5,9,18,.95));
+  border:1px solid rgba(56,189,248,.35);
+  border-radius:var(--r-xl);
+  position:relative;overflow:hidden;
+  box-shadow:0 12px 36px rgba(0,0,0,.5),inset 0 0 60px rgba(56,189,248,.06);
+}
+/* Subtle scanning grid */
+.char-panel::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:
+    linear-gradient(rgba(56,189,248,.05) 1px,transparent 1px) 0 0/100% 22px,
+    linear-gradient(90deg,rgba(56,189,248,.05) 1px,transparent 1px) 0 0/22px 100%;
+}
+.char-panel::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 100%,rgba(56,189,248,.15),transparent 60%);
+}
+
+.char-frame{
+  position:relative;height:300px;
+  background:radial-gradient(ellipse at 50% 70%,rgba(56,189,248,.18),rgba(11,20,38,0) 70%);
+  border-radius:var(--r-lg);overflow:hidden;
+}
+.cf-corner{
+  position:absolute;width:20px;height:20px;border:2px solid var(--cy-1);
+  filter:drop-shadow(0 0 6px var(--cy-glow));
+}
+.cf-corner.tl{top:6px;left:6px;border-right:none;border-bottom:none;border-radius:6px 0 0 0;}
+.cf-corner.tr{top:6px;right:6px;border-left:none;border-bottom:none;border-radius:0 6px 0 0;}
+.cf-corner.bl{bottom:6px;left:6px;border-right:none;border-top:none;border-radius:0 0 0 6px;}
+.cf-corner.br{bottom:6px;right:6px;border-left:none;border-top:none;border-radius:0 0 6px 0;}
+
+.char-fig{
+  position:absolute;top:8px;left:50%;transform:translateX(-50%);
+  width:200px;height:280px;
+  filter:drop-shadow(0 0 18px rgba(56,189,248,.6));
+}
+.char-fig svg{width:100%;height:100%;}
+
+/* Animated scan line */
+.scan-line{
+  position:absolute;left:8%;right:8%;height:2px;
+  background:linear-gradient(90deg,transparent,var(--cy-1),transparent);
+  filter:blur(1px);
+  box-shadow:0 0 8px var(--cy-1);
+  animation:scan 3s ease-in-out infinite;
+}
+@keyframes scan{
+  0%{top:14%;opacity:0;}
+  10%{opacity:.9;}
+  90%{opacity:.9;}
+  100%{top:90%;opacity:0;}
+}
+
+.char-tag{
+  position:absolute;top:14px;left:14px;z-index:3;
+  font-size:9px;letter-spacing:2px;color:var(--cy-1);
+  font-family:'Orbitron',sans-serif;font-weight:700;
+  padding:3px 8px;background:rgba(56,189,248,.12);
+  border:1px solid rgba(56,189,248,.4);border-radius:4px;
+}
+.char-name{
+  position:absolute;bottom:14px;left:50%;transform:translateX(-50%);
+  z-index:3;font-size:13px;font-weight:800;letter-spacing:1px;
+  padding:5px 14px;background:rgba(11,20,38,.7);
+  border:1px solid var(--cy-2);border-radius:99px;
+  backdrop-filter:blur(8px);
+  white-space:nowrap;
+}
+.char-name b{color:var(--cy-1);font-family:'Orbitron',sans-serif;letter-spacing:2px;margin-right:6px;}
+
+/* Char crest (badge) */
+.char-crest{
+  position:absolute;top:38px;left:14px;z-index:3;
+  width:34px;height:42px;
+  background:linear-gradient(180deg,rgba(56,189,248,.25),rgba(11,20,38,.85));
+  border:1px solid var(--cy-2);
+  clip-path:polygon(50% 0%, 100% 18%, 100% 80%, 50% 100%, 0% 80%, 0% 18%);
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-family:'Orbitron',sans-serif;font-weight:800;color:var(--cy-1);
+}
+
+/* === Base stats (5 attributes) === */
+.base-stats{
+  margin:12px 14px 0;padding:14px 16px;
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--glass-border);
+  border-radius:var(--r);
+}
+.bs-title{
+  font-size:11px;font-weight:700;color:var(--t-3);letter-spacing:2px;
+  text-transform:uppercase;margin-bottom:10px;
+  display:flex;align-items:center;gap:8px;
+}
+.bs-title::before{content:'';width:14px;height:2px;background:var(--cy-1);border-radius:1px;}
+.bs-row{
+  display:flex;align-items:center;gap:8px;margin-bottom:7px;
+  font-size:11px;
+}
+.bs-row:last-child{margin-bottom:0;}
+.bs-ic{width:18px;text-align:center;font-size:13px;}
+.bs-n{width:36px;color:var(--t-2);font-weight:600;}
+.bs-bar{flex:1;height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden;position:relative;}
+.bs-fill{height:100%;border-radius:3px;transition:width .8s;box-shadow:0 0 6px currentColor;}
+.bs-v{font-family:'Orbitron',sans-serif;font-weight:800;font-size:13px;width:30px;text-align:right;}
+
+/* Growth driving conditions card */
+.growth-core{
+  margin:12px 14px 0;padding:14px;
+  background:linear-gradient(135deg,rgba(56,189,248,.1),rgba(11,20,38,.6));
+  border:1px solid rgba(56,189,248,.3);
+  border-radius:var(--r);
+}
+.gc-title{
+  text-align:center;font-size:11px;font-weight:700;
+  color:var(--cy-1);letter-spacing:2px;margin-bottom:10px;
+  font-family:'Orbitron',sans-serif;
+}
+.gc-list{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;}
+.gc-list li{font-size:11px;color:var(--t-2);display:flex;align-items:center;gap:6px;}
+.gc-list li::before{content:'›';color:var(--cy-1);font-weight:900;}
+
+/* Growth paths */
+.gp-stack{display:flex;flex-direction:column;gap:9px;padding:0 14px;}
+.gp-card{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 16px;border-radius:var(--r);
+  background:linear-gradient(135deg,rgba(56,189,248,.15),rgba(11,20,38,.65));
+  border:1px solid rgba(56,189,248,.4);
+  cursor:pointer;transition:all .25s;
+  position:relative;overflow:hidden;
+}
+.gp-card::before{
+  content:'';position:absolute;width:140px;height:140px;
+  right:-30px;top:-30px;
+  background:radial-gradient(circle,rgba(56,189,248,.25),transparent 65%);
+  pointer-events:none;
+}
+.gp-card.cyan{border-color:rgba(56,189,248,.5);box-shadow:0 6px 22px rgba(56,189,248,.2);}
+.gp-card.cyan::before{background:radial-gradient(circle,rgba(56,189,248,.35),transparent 65%);}
+.gp-card.gold{
+  background:linear-gradient(135deg,rgba(251,191,36,.15),rgba(255,126,95,.08));
+  border-color:rgba(251,191,36,.5);box-shadow:0 6px 22px rgba(251,191,36,.2);
+}
+.gp-card.gold::before{background:radial-gradient(circle,rgba(251,191,36,.35),transparent 65%);}
+.gp-card.violet{
+  background:linear-gradient(135deg,rgba(168,85,247,.15),rgba(11,20,38,.65));
+  border-color:rgba(168,85,247,.5);box-shadow:0 6px 22px rgba(168,85,247,.2);
+}
+.gp-card.violet::before{background:radial-gradient(circle,rgba(168,85,247,.35),transparent 65%);}
+.gp-card:hover{transform:translateY(-2px);}
+
+.gp-icon{
+  width:54px;height:54px;flex-shrink:0;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;font-size:28px;
+  background:rgba(56,189,248,.18);border:1px solid rgba(56,189,248,.5);
+  position:relative;z-index:1;
+}
+.gp-card.gold .gp-icon{background:rgba(251,191,36,.18);border-color:rgba(251,191,36,.5);}
+.gp-card.violet .gp-icon{background:rgba(168,85,247,.18);border-color:rgba(168,85,247,.5);}
+
+.gp-info{flex:1;min-width:0;position:relative;z-index:1;}
+.gp-name{
+  font-size:16px;font-weight:900;letter-spacing:1px;
+  display:flex;align-items:center;gap:8px;
+}
+.gp-name .gp-badge{
+  font-size:9px;padding:2px 7px;border-radius:99px;
+  font-weight:700;letter-spacing:.5px;
+  background:rgba(56,189,248,.18);color:var(--cy-1);border:1px solid rgba(56,189,248,.4);
+}
+.gp-card.gold .gp-name .gp-badge{background:rgba(251,191,36,.18);color:var(--gold);border-color:rgba(251,191,36,.4);}
+.gp-card.violet .gp-name .gp-badge{background:rgba(168,85,247,.18);color:#C084FC;border-color:rgba(168,85,247,.4);}
+.gp-tag{font-size:10px;color:var(--t-3);margin-top:2px;}
+.gp-stats{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
+.gp-stat{
+  font-size:9.5px;font-weight:700;
+  padding:1.5px 7px;border-radius:99px;letter-spacing:.3px;
+  background:rgba(56,189,248,.15);color:var(--cy-1);border:1px solid rgba(56,189,248,.3);
+}
+.gp-card.gold .gp-stat{background:rgba(251,191,36,.15);color:var(--gold);border-color:rgba(251,191,36,.3);}
+.gp-card.violet .gp-stat{background:rgba(168,85,247,.15);color:#C084FC;border-color:rgba(168,85,247,.3);}
+
+/* Bonus reward paths */
+.bonus-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:0 14px;}
+.bonus-card{
+  padding:12px 10px;text-align:center;border-radius:var(--r);
+  background:linear-gradient(135deg,rgba(168,85,247,.12),rgba(11,20,38,.6));
+  border:1px solid rgba(168,85,247,.3);
+  cursor:pointer;transition:all .2s;
+}
+.bonus-card:hover{transform:translateY(-2px);border-color:var(--violet);box-shadow:0 8px 22px rgba(168,85,247,.3);}
+.bonus-card.gold:hover{border-color:var(--gold);box-shadow:0 8px 22px rgba(251,191,36,.3);}
+.bonus-card.gold{
+  background:linear-gradient(135deg,rgba(251,191,36,.12),rgba(11,20,38,.6));
+  border-color:rgba(251,191,36,.3);
+}
+.bn-ic{font-size:22px;margin-bottom:4px;filter:drop-shadow(0 0 6px var(--violet-glow));}
+.bonus-card.gold .bn-ic{filter:drop-shadow(0 0 6px var(--gold-glow));}
+.bn-name{font-size:12px;font-weight:800;color:#C084FC;letter-spacing:1px;}
+.bonus-card.gold .bn-name{color:var(--gold);}
+.bn-desc{font-size:9.5px;color:var(--t-3);margin-top:3px;line-height:1.5;}
+
+/* Status card (HP/Stamina/Fatigue inline) */
+.status-card{
+  margin:12px 14px 0;padding:12px 14px;
+  background:rgba(255,255,255,.03);
+  border:1px solid var(--glass-border);border-radius:var(--r);
+}
+.status-card .status-bars{margin-top:0;}
+
+/* Quote at bottom */
+.growth-quote{
+  margin:18px 14px 4px;padding:12px 14px;
+  text-align:center;font-size:11px;
+  color:var(--t-2);letter-spacing:1px;font-style:italic;
+  background:linear-gradient(90deg,transparent,rgba(56,189,248,.06),transparent);
+  border-top:1px solid rgba(56,189,248,.15);
+  border-bottom:1px solid rgba(56,189,248,.15);
+}
+
+/* === Pet Evolution Hero (uses 宠物进化演示.png) === */
+.pet-evo-hero{
+  margin:14px 14px 0;
+  position:relative;border-radius:var(--r-xl);overflow:hidden;
+  border:1px solid rgba(56,189,248,.4);
+  box-shadow:0 16px 40px rgba(0,0,0,.55),0 0 60px rgba(56,189,248,.15);
+  cursor:pointer;
+}
+.pev-img{
+  width:100%;display:block;
+  background:#000;
+}
+.pev-img img{width:100%;display:block;}
+.pev-overlay{
+  position:absolute;inset:0;pointer-events:none;
+  background:
+    linear-gradient(180deg,transparent 0%,transparent 60%,rgba(5,9,18,.6) 100%);
+}
+.pev-corner{
+  position:absolute;width:18px;height:18px;border:2px solid var(--cy-1);
+  filter:drop-shadow(0 0 6px var(--cy-glow));pointer-events:none;
+}
+.pev-corner.tl{top:6px;left:6px;border-right:none;border-bottom:none;border-radius:5px 0 0 0;}
+.pev-corner.tr{top:6px;right:6px;border-left:none;border-bottom:none;border-radius:0 5px 0 0;}
+.pev-corner.bl{bottom:6px;left:6px;border-right:none;border-top:none;border-radius:0 0 0 5px;}
+.pev-corner.br{bottom:6px;right:6px;border-left:none;border-top:none;border-radius:0 0 5px 0;}
+.pev-tag{
+  position:absolute;top:10px;left:14px;
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:9.5px;font-weight:700;letter-spacing:2px;
+  color:var(--cy-1);font-family:'Orbitron',sans-serif;
+  padding:4px 10px;background:rgba(11,20,38,.75);
+  border:1px solid var(--cy-2);border-radius:4px;
+  backdrop-filter:blur(6px);
+}
+.pev-tag::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--cy-1);box-shadow:0 0 6px var(--cy-1);animation:pulseDot 1.5s ease-in-out infinite;}
+
+/* Evolution form quick chips below hero */
+.evo-forms{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;
+  padding:0 14px;margin:10px 0 0;
+}
+.evo-form{
+  padding:10px 6px;text-align:center;border-radius:var(--r);
+  background:rgba(255,255,255,.04);border:1px solid var(--glass-border);
+  transition:all .2s;cursor:pointer;
+}
+.evo-form.cyan{
+  background:linear-gradient(180deg,rgba(56,189,248,.18),rgba(11,20,38,.5));
+  border-color:rgba(56,189,248,.45);
+  box-shadow:0 4px 14px rgba(56,189,248,.2);
+}
+.evo-form.gold{
+  background:linear-gradient(180deg,rgba(251,191,36,.18),rgba(11,20,38,.5));
+  border-color:rgba(251,191,36,.45);
+  box-shadow:0 4px 14px rgba(251,191,36,.2);
+}
+.evo-form.violet{
+  background:linear-gradient(180deg,rgba(168,85,247,.18),rgba(11,20,38,.5));
+  border-color:rgba(168,85,247,.45);
+  box-shadow:0 4px 14px rgba(168,85,247,.2);
+}
+.evo-form:hover{transform:translateY(-2px);}
+.ef-ic{font-size:24px;margin-bottom:4px;}
+.ef-n{font-size:11px;font-weight:800;letter-spacing:.5px;}
+.evo-form.cyan .ef-n{color:var(--cy-1);}
+.evo-form.gold .ef-n{color:var(--gold);}
+.evo-form.violet .ef-n{color:#C084FC;}
+.ef-meta{font-size:9px;color:var(--t-3);margin-top:2px;}
+
+/* === EXPLORE — Pokémon GO style (map dominant) === */
+.exp-header-bar{
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:max(70px,calc(env(safe-area-inset-top) + 64px)) 14px 12px;
+  background:linear-gradient(180deg,rgba(11,20,38,.85) 0%,rgba(5,9,18,.5) 70%,transparent 100%);
+}
+.exp-loc-card{
+  flex:1;min-width:0;display:flex;align-items:center;gap:8px;
+  padding:7px 14px;border-radius:99px;
+  background:rgba(11,20,38,.7);border:1px solid var(--cy-2);
+  backdrop-filter:blur(12px);
+  box-shadow:0 4px 12px rgba(0,0,0,.4),0 0 12px rgba(56,189,248,.25);
+}
+.elc-ic{font-size:15px;flex-shrink:0;}
+.elc-text{line-height:1.2;min-width:0;}
+.elc-name{font-size:12.5px;font-weight:800;color:var(--cy-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.elc-stats{font-size:9.5px;color:var(--t-3);letter-spacing:.5px;}
+.exp-iot{
+  display:flex;align-items:center;gap:5px;flex-shrink:0;
+  padding:6px 11px;border-radius:99px;
+  background:rgba(11,20,38,.7);border:1px solid var(--mint);
+  font-size:9.5px;font-weight:600;color:var(--mint);
+  backdrop-filter:blur(8px);
+}
+.exp-iot::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--mint);box-shadow:0 0 6px var(--mint);animation:pulseDot 2s ease-in-out infinite;}
+
+/* Big map — main gameplay area */
+.map-wrap.big{
+  margin:0 14px;height:50vh;min-height:380px;max-height:480px;
+  border-radius:var(--r-xl);border:1px solid rgba(56,189,248,.3);
+  box-shadow:0 12px 32px rgba(0,0,0,.5),inset 0 0 80px rgba(56,189,248,.1);
+}
+.map-distance{
+  position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:25;
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 12px;border-radius:99px;
+  background:rgba(11,20,38,.85);border:1px solid var(--gold);
+  backdrop-filter:blur(8px);
+  font-size:10px;font-weight:700;color:var(--gold);
+  box-shadow:0 0 12px var(--gold-glow);
+}
+
+/* Smart contextual action panel */
+.ctx-panel{
+  position:relative;margin:14px 0 0;padding:0 14px;
+}
+.ctx-loc{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;margin-bottom:10px;
+  background:linear-gradient(135deg,rgba(56,189,248,.15),rgba(11,20,38,.7));
+  border:1px solid rgba(56,189,248,.35);
+  border-radius:var(--r);
+  box-shadow:0 4px 14px rgba(0,0,0,.3);
+}
+.ctx-pin{
+  width:32px;height:32px;border-radius:50%;
+  background:radial-gradient(circle,var(--cy-2),var(--cy-4));
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;color:#fff;
+  box-shadow:0 0 12px var(--cy-glow);
+}
+.ctx-loc-info{flex:1;}
+.ctx-loc-name{font-size:13px;font-weight:800;color:var(--cy-1);}
+.ctx-loc-meta{font-size:10px;color:var(--t-3);margin-top:1px;}
+.ctx-loc-tip{
+  font-size:10px;font-weight:600;
+  padding:3px 9px;border-radius:99px;
+  background:rgba(56,189,248,.18);color:var(--cy-1);
+  border:1px solid rgba(56,189,248,.4);
+}
+
+/* Smart action buttons (locked/unlocked) */
+.ctx-actions{
+  display:grid;grid-template-columns:1fr 1fr;gap:7px;
+}
+.ca-btn{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 12px;font-family:inherit;cursor:pointer;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--glass-border);
+  border-radius:var(--r);
+  color:var(--t-1);text-align:left;
+  transition:all .2s;
+  position:relative;overflow:hidden;
+}
+.ca-btn:hover{transform:translateY(-2px);}
+.ca-btn.unlocked{
+  background:linear-gradient(135deg,rgba(56,189,248,.18),rgba(56,189,248,.05));
+  border-color:rgba(56,189,248,.5);
+  box-shadow:0 4px 14px rgba(56,189,248,.2);
+}
+.ca-btn.unlocked.power{
+  background:linear-gradient(135deg,rgba(244,114,182,.18),rgba(244,114,182,.05));
+  border-color:rgba(244,114,182,.5);
+  box-shadow:0 4px 14px rgba(244,114,182,.2);
+}
+.ca-btn.unlocked.gold{
+  background:linear-gradient(135deg,rgba(251,191,36,.18),rgba(251,191,36,.05));
+  border-color:rgba(251,191,36,.5);
+  box-shadow:0 4px 14px rgba(251,191,36,.2);
+}
+.ca-btn.locked{
+  opacity:.6;cursor:not-allowed;
+  background:rgba(255,255,255,.02);
+  border-style:dashed;
+}
+.ca-btn.locked:hover{transform:none;}
+.ca-ic{
+  width:38px;height:38px;flex-shrink:0;border-radius:10px;
+  background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+}
+.ca-btn.unlocked.power .ca-ic{background:rgba(244,114,182,.18);border-color:rgba(244,114,182,.45);}
+.ca-btn.unlocked.gold .ca-ic{background:rgba(251,191,36,.18);border-color:rgba(251,191,36,.45);}
+.ca-btn.locked .ca-ic{background:rgba(255,255,255,.04);border-color:var(--glass-border);}
+.ca-info{flex:1;min-width:0;}
+.ca-name{font-size:12.5px;font-weight:700;}
+.ca-meta{font-size:9.5px;color:var(--t-3);margin-top:2px;letter-spacing:.3px;}
+.ca-meta.ok{color:var(--mint);}
+.ca-meta.lk{color:var(--warn);}
+
+/* Compact encounter / boss strips below */
+.encounter-banner.compact{
+  margin:10px 14px 0;padding:10px 12px;
+  border-radius:var(--r);
+}
+.encounter-banner.compact .eb-emoji{
+  width:42px;height:42px;font-size:22px;
+}
+.encounter-banner.compact .eb-name{font-size:13px;}
+.encounter-banner.compact .eb-tag{font-size:8.5px;}
+.encounter-banner.compact .eb-go{padding:5px 10px;font-size:10px;}
+
+.boss.compact{
+  margin:10px 14px 0;padding:12px 14px;border-radius:var(--r);
+}
+.boss.compact::before{display:none;}
+.boss.compact .boss-tag{margin-bottom:6px;font-size:9.5px;}
+.boss.compact .boss-n{font-size:14px;margin-bottom:4px;}
+.boss.compact .boss-time{font-size:10px;margin-bottom:8px;}
+
+/* Online friends compact */
+.online-strip.compact{
+  margin:10px 14px;padding:8px 12px;
+  font-size:10.5px;
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+<header id="topbar">
+  <div>
+    <div class="brand">FitVenture</div>
+    <div class="brand-sub">CAMPUS · 校园灵兽</div>
+  </div>
+  <div class="icons">
+    <button class="icon-btn" onclick="openPrivacy()" title="隐私">🔒</button>
+    <button class="icon-btn" onclick="resetDemo()" title="重置演示">⟲</button>
+  </div>
+</header>
+
+<main id="tabs">
+
+<!-- ============== 角色 ============== -->
+<section class="panel active" id="p-role">
+
+  <div class="rg-header">
+    <div class="rg-title">校园角色成长系统</div>
+    <div class="rg-sub">基于真实运动习惯成长，解锁武器、套装与战斗定位</div>
+    <div class="iot-badge" id="iot-status">
+      <span id="iot-label">⌚ Apple Watch · 已连接</span>
+    </div>
+  </div>
+
+  <!-- ===== Character Portrait (uses 主角图.png) ===== -->
+  <div class="char-portrait" onclick="openRoleFullscreen()">
+    <span class="pev-tag">CHARACTER · 初始形态</span>
+    <span class="pev-corner tl"></span>
+    <span class="pev-corner tr"></span>
+    <span class="pev-corner bl"></span>
+    <span class="pev-corner br"></span>
+    <div class="cp-aura"></div>
+    <img src="主角图.png" class="cp-img" alt="主角立绘"/>
+    <div class="cp-name-tag"><b>HAOYUAN</b><span>Lv.8 · 普通学生形态</span></div>
+  </div>
+
+  <!-- Hidden legacy SVG block (keep for future, hidden) -->
+  <div class="char-panel" style="display:none;">
+    <div class="char-frame">
+      <span class="cf-corner tl"></span>
+      <span class="cf-corner tr"></span>
+      <span class="cf-corner bl"></span>
+      <span class="cf-corner br"></span>
+      <div class="scan-line"></div>
+
+      <div class="char-tag">INITIAL · 普通学生</div>
+      <div class="char-crest">UEA</div>
+
+      <div class="char-fig">
+        <svg viewBox="0 0 200 320" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#fff" stop-opacity=".95"/>
+              <stop offset="100%" stop-color="#cbd5e1" stop-opacity=".85"/>
+            </linearGradient>
+            <linearGradient id="hoodGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#1e293b"/>
+              <stop offset="100%" stop-color="#0f172a"/>
+            </linearGradient>
+            <linearGradient id="swordGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#7DD3FC"/>
+              <stop offset="100%" stop-color="#0EA5E9"/>
+            </linearGradient>
+            <radialGradient id="aura" cx="50%" cy="80%" r="60%">
+              <stop offset="0%" stop-color="#38BDF8" stop-opacity=".5"/>
+              <stop offset="100%" stop-color="#38BDF8" stop-opacity="0"/>
+            </radialGradient>
+            <filter id="glow"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+
+          <!-- Aura platform -->
+          <ellipse cx="100" cy="295" rx="70" ry="14" fill="url(#aura)"/>
+          <ellipse cx="100" cy="295" rx="46" ry="6" fill="none" stroke="#38BDF8" stroke-width="1" opacity=".6">
+            <animate attributeName="rx" values="46;58;46" dur="3s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values=".6;.2;.6" dur="3s" repeatCount="indefinite"/>
+          </ellipse>
+
+          <!-- Hair (back) -->
+          <path d="M70 30 Q 100 8 130 30 L 132 56 L 68 56 Z" fill="url(#hoodGrad)"/>
+          <!-- Face -->
+          <ellipse cx="100" cy="58" rx="20" ry="24" fill="#f5d4b3"/>
+          <!-- Eyes -->
+          <ellipse cx="92" cy="60" rx="2" ry="3" fill="#0f172a"/>
+          <ellipse cx="108" cy="60" rx="2" ry="3" fill="#0f172a"/>
+          <!-- Hair front -->
+          <path d="M80 38 Q 90 28 100 36 Q 110 28 120 38 L 118 50 L 102 46 L 96 46 L 82 50 Z" fill="url(#hoodGrad)"/>
+          <!-- Neck -->
+          <rect x="92" y="78" width="16" height="10" fill="#e8c5a0"/>
+          <!-- Hood collar (dark) -->
+          <path d="M64 88 L 80 84 L 100 92 L 120 84 L 136 88 L 132 100 L 100 104 L 68 100 Z" fill="url(#hoodGrad)"/>
+          <!-- Hoodie body -->
+          <path d="M64 88 L 56 130 L 50 220 L 70 226 L 75 270 L 65 308 L 80 312 L 92 270 L 92 226 L 108 226 L 108 270 L 120 312 L 135 308 L 125 270 L 130 226 L 150 220 L 144 130 L 136 88 L 120 84 L 110 96 L 100 100 L 90 96 L 80 84 Z" fill="url(#bodyGrad)"/>
+          <!-- Hoodie blue accent stripes -->
+          <path d="M82 96 L 100 102 L 100 142 L 82 138 Z" fill="#0EA5E9" opacity=".75"/>
+          <path d="M118 96 L 100 102 L 100 142 L 118 138 Z" fill="#0EA5E9" opacity=".75"/>
+          <!-- Drawstrings -->
+          <line x1="92" y1="100" x2="92" y2="130" stroke="#94a3b8" stroke-width="1.5"/>
+          <line x1="108" y1="100" x2="108" y2="130" stroke="#94a3b8" stroke-width="1.5"/>
+          <circle cx="92" cy="132" r="2" fill="#cbd5e1"/>
+          <circle cx="108" cy="132" r="2" fill="#cbd5e1"/>
+          <!-- Pocket line -->
+          <path d="M75 165 Q 100 175 125 165" stroke="#94a3b8" stroke-width="1" fill="none" opacity=".6"/>
+          <!-- Pants -->
+          <path d="M75 226 L 70 308 L 92 308 L 96 230 Z" fill="#1e293b"/>
+          <path d="M125 226 L 130 308 L 108 308 L 104 230 Z" fill="#1e293b"/>
+          <!-- Shoes -->
+          <ellipse cx="80" cy="312" rx="13" ry="5" fill="#f8fafc"/>
+          <ellipse cx="120" cy="312" rx="13" ry="5" fill="#f8fafc"/>
+          <line x1="68" y1="312" x2="92" y2="312" stroke="#0EA5E9" stroke-width="1.5"/>
+          <line x1="108" y1="312" x2="132" y2="312" stroke="#0EA5E9" stroke-width="1.5"/>
+
+          <!-- Right arm with sword (extends out) -->
+          <path d="M136 100 L 158 130 L 168 200 L 156 200 L 148 140 L 130 116 Z" fill="url(#bodyGrad)"/>
+          <!-- Sword grip -->
+          <rect x="158" y="195" width="6" height="14" fill="#475569"/>
+          <!-- Sword guard -->
+          <rect x="150" y="190" width="22" height="4" rx="1" fill="#64748b"/>
+          <!-- Sword blade -->
+          <path d="M159 142 L 165 142 L 167 190 L 157 190 Z" fill="url(#swordGrad)" filter="url(#glow)"/>
+          <line x1="162" y1="144" x2="162" y2="188" stroke="#fff" stroke-width="1" opacity=".7"/>
+          <!-- Tech glow on blade -->
+          <circle cx="162" cy="160" r="3" fill="#fff" opacity=".8">
+            <animate attributeName="cy" values="146;186;146" dur="2.5s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values=".9;.3;.9" dur="2.5s" repeatCount="indefinite"/>
+          </circle>
+
+          <!-- Left arm (relaxed) -->
+          <path d="M64 100 L 46 132 L 40 200 L 52 200 L 58 140 L 70 116 Z" fill="url(#bodyGrad)"/>
+
+          <!-- Energy particles -->
+          <circle cx="40" cy="180" r="2" fill="#7DD3FC">
+            <animate attributeName="cy" values="280;180;80" dur="4s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0;1;0" dur="4s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="170" cy="220" r="2" fill="#7DD3FC">
+            <animate attributeName="cy" values="280;220;120" dur="5s" repeatCount="indefinite" begin="1s"/>
+            <animate attributeName="opacity" values="0;1;0" dur="5s" repeatCount="indefinite" begin="1s"/>
+          </circle>
+          <circle cx="55" cy="240" r="1.5" fill="#FBBF24">
+            <animate attributeName="cy" values="290;180;100" dur="6s" repeatCount="indefinite" begin="2s"/>
+            <animate attributeName="opacity" values="0;.8;0" dur="6s" repeatCount="indefinite" begin="2s"/>
+          </circle>
+        </svg>
+      </div>
+
+      <div class="char-name"><b>HAOYUAN</b>Lv.8 普通学生形态</div>
+    </div>
+  </div>
+
+  <!-- ===== Base Stats (5 attributes) ===== -->
+  <div class="base-stats">
+    <div class="bs-title">基础属性</div>
+    <div class="bs-row">
+      <span class="bs-ic" style="color:#38BDF8">⚡</span><span class="bs-n">速度</span>
+      <div class="bs-bar"><div class="bs-fill" style="width:32%;background:linear-gradient(90deg,#38BDF8,#0EA5E9);color:#38BDF8"></div></div>
+      <span class="bs-v" style="color:#38BDF8">32</span>
+    </div>
+    <div class="bs-row">
+      <span class="bs-ic" style="color:#FBBF24">💪</span><span class="bs-n">力量</span>
+      <div class="bs-bar"><div class="bs-fill" style="width:28%;background:linear-gradient(90deg,#FBBF24,#F59E0B);color:#FBBF24"></div></div>
+      <span class="bs-v" style="color:#FBBF24">28</span>
+    </div>
+    <div class="bs-row">
+      <span class="bs-ic" style="color:#34D399">❤️</span><span class="bs-n">耐力</span>
+      <div class="bs-bar"><div class="bs-fill" style="width:30%;background:linear-gradient(90deg,#34D399,#10B981);color:#34D399"></div></div>
+      <span class="bs-v" style="color:#34D399">30</span>
+    </div>
+    <div class="bs-row">
+      <span class="bs-ic" style="color:#F472B6">🌀</span><span class="bs-n">机动</span>
+      <div class="bs-bar"><div class="bs-fill" style="width:31%;background:linear-gradient(90deg,#F472B6,#EC4899);color:#F472B6"></div></div>
+      <span class="bs-v" style="color:#F472B6">31</span>
+    </div>
+    <div class="bs-row">
+      <span class="bs-ic" style="color:#A855F7">✨</span><span class="bs-n">共鸣</span>
+      <div class="bs-bar"><div class="bs-fill" style="width:25%;background:linear-gradient(90deg,#A855F7,#D946EF);color:#A855F7"></div></div>
+      <span class="bs-v" style="color:#A855F7">25</span>
+    </div>
+  </div>
+
+  <!-- ===== Growth Paths (3) — driving conditions inline as tags ===== -->
+  <div class="sec-title" style="padding:0 4px;margin:18px 18px 10px;">
+    <span class="lbl">成长路径 · 选择你的进化方向</span>
+    <span class="ext">真实运动驱动</span>
+  </div>
+  <div class="gp-stack">
+    <div class="gp-card cyan" onclick="showGrowthPath('wind')">
+      <div class="gp-icon">🌪️</div>
+      <div class="gp-info">
+        <div class="gp-name">迅刃先锋 <span class="gp-badge">机动成长</span></div>
+        <div class="gp-tag">有氧运动主导 · 跑步、骑行、球类等</div>
+        <div class="gp-stats"><span class="gp-stat">速度↑</span><span class="gp-stat">机动↑</span><span class="gp-stat">耐力↑</span></div>
+      </div>
+    </div>
+    <div class="gp-card gold" onclick="showGrowthPath('iron')">
+      <div class="gp-icon">⚙️</div>
+      <div class="gp-info">
+        <div class="gp-name">破阵强袭 <span class="gp-badge">力量成长</span></div>
+        <div class="gp-tag">力量训练主导 · 举铁、卧推、深蹲、自重等</div>
+        <div class="gp-stats"><span class="gp-stat">力量↑</span><span class="gp-stat">稳定↑</span><span class="gp-stat">破防↑</span></div>
+      </div>
+    </div>
+    <div class="gp-card violet" onclick="showGrowthPath('hybrid')">
+      <div class="gp-icon">✨</div>
+      <div class="gp-info">
+        <div class="gp-name">共鸣统御 <span class="gp-badge">均衡成长</span></div>
+        <div class="gp-tag">有氧无氧均衡 · 跑步 + 力量 + 长期平衡</div>
+        <div class="gp-stats"><span class="gp-stat">速度↑</span><span class="gp-stat">力量↑</span><span class="gp-stat">共鸣↑</span><span class="gp-stat">全面提升</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Bonus Reward Paths ===== -->
+  <div class="sec-title" style="padding:0 4px;margin:18px 18px 10px;">
+    <span class="lbl">特殊奖励路径</span>
+  </div>
+  <div class="bonus-grid">
+    <div class="bonus-card gold" onclick="showToast('坚持训练 7 天可解锁连胜光环')">
+      <div class="bn-ic">⭐</div>
+      <div class="bn-name">连胜光环</div>
+      <div class="bn-desc">连续打卡 / 持续训练 / 长期活跃</div>
+    </div>
+    <div class="bonus-card" onclick="showToast('好友共鸣可解锁协作徽记')">
+      <div class="bn-ic">🤝</div>
+      <div class="bn-name">协作徽记</div>
+      <div class="bn-desc">好友协作 / Boss 共鸣 / 阵营贡献</div>
+    </div>
+  </div>
+
+  <!-- ===== Resources + Ecosystem ===== -->
+  <div class="sec-title" style="padding:0 4px;margin:18px 18px 10px;">
+    <span class="lbl">运动资源 · 队伍生态</span>
+    <span class="ext" id="eco-chip" style="color:var(--rose);background:rgba(244,114,182,.12);border:1px solid rgba(244,114,182,.45);padding:3px 10px;border-radius:99px;font-size:10px;font-weight:600;letter-spacing:.3px;">⚠️ 疾风过载 · 捕捉 −10%</span>
+  </div>
+  <div style="padding:0 14px;">
+    <div class="res-grid">
+      <div class="res gold"><div class="res-ic">🔥</div><div class="res-v" id="r-energy">320</div><div class="res-n">热量能量</div></div>
+      <div class="res rose"><div class="res-ic">⚡</div><div class="res-v" id="r-power">4</div><div class="res-n">力量核心</div></div>
+      <div class="res cyan"><div class="res-ic">🔮</div><div class="res-v" id="r-orb">2</div><div class="res-n">捕捉球</div></div>
+      <div class="res mint"><div class="res-ic">🌿</div><div class="res-v" id="r-recv">60</div><div class="res-n">恢复值</div></div>
+      <div class="res"><div class="res-ic">🔆</div><div class="res-v" id="r-streak">5</div><div class="res-n">坚持值</div></div>
+      <div class="res cyan"><div class="res-ic">🛡️</div><div class="res-v" id="r-fac">180</div><div class="res-n">阵营贡献</div></div>
+      <div class="res gold"><div class="res-ic">💞</div><div class="res-v" id="r-bond">7</div><div class="res-n">羁绊 Lv</div></div>
+      <div class="res violet"><div class="res-ic">🔍</div><div class="res-v">1/120</div><div class="res-n">隐藏线索</div></div>
+    </div>
+  </div>
+
+  <!-- ===== Live Status (HP/Stamina/Fatigue) ===== -->
+  <div class="sec-title" style="padding:0 4px;margin:18px 18px 10px;">
+    <span class="lbl">当前状态</span>
+    <span class="ext" id="streak-tag">🔥 连续 5 天</span>
+  </div>
+  <div class="status-card">
+    <div class="status-bars">
+      <div class="sb-row">
+        <span class="sb-icon">❤️</span><span class="sb-name">HP</span>
+        <div class="sb-bar"><div class="sb-fill hp" style="width:88%"></div></div>
+        <span class="sb-num">88 / 100</span>
+      </div>
+      <div class="sb-row">
+        <span class="sb-icon">⚡</span><span class="sb-name">体力</span>
+        <div class="sb-bar"><div class="sb-fill stamina" style="width:62%"></div></div>
+        <span class="sb-num">62 / 100</span>
+      </div>
+      <div class="sb-row">
+        <span class="sb-icon">😓</span><span class="sb-name">疲劳</span>
+        <div class="sb-bar"><div class="sb-fill fatigue" id="fat-fill" style="width:68%"></div></div>
+        <span class="sb-num"><span id="fat-num">68</span> / 100</span>
+      </div>
+    </div>
+    <!-- Hidden legacy IDs to keep render() compatible -->
+    <span style="display:none" id="twin-form">混合运动者</span>
+    <span style="display:none" id="twin-form-2">混合运动者</span>
+    <span style="display:none" id="ts-sta">72</span>
+    <span style="display:none" id="ts-pow">56</span>
+    <span style="display:none" id="ts-bal">45</span>
+    <span style="display:none" id="ts-rec">60</span>
+    <span style="display:none" id="ts-str">5</span>
+  </div>
+
+  <div class="body-content" style="margin-top:0;padding:0 14px;">
+
+    <!-- Equipment slots -->
+    <div class="sec-title">
+      <span class="lbl">装备栏 · 主角</span>
+      <span class="ext" onclick="showToast('装备库即将上线，敬请期待')">查看全部 ›</span>
+    </div>
+    <div class="equip-grid">
+      <div class="equip-slot" onclick="showEquip('weapon')">
+        <div class="eq-ic">🥊</div>
+        <div class="eq-info"><div class="eq-slot">武器</div><div class="eq-name">能量手套</div><div class="eq-lv">Lv.2 · 力量+8</div></div>
+      </div>
+      <div class="equip-slot" onclick="showEquip('top')">
+        <div class="eq-ic">🦺</div>
+        <div class="eq-info"><div class="eq-slot">上装</div><div class="eq-name">风轨战甲</div><div class="eq-lv">Lv.1 · 耐力+5</div></div>
+      </div>
+      <div class="equip-slot" onclick="showEquip('bottom')">
+        <div class="eq-ic">👖</div>
+        <div class="eq-info"><div class="eq-slot">下装</div><div class="eq-name">疾风战裤</div><div class="eq-lv">Lv.1 · 速度+4</div></div>
+      </div>
+      <div class="equip-slot empty locked" onclick="showToast('🔒 完成 5km 累计跑步可解锁')">
+        <div class="eq-ic">👟</div>
+        <div class="eq-info"><div class="eq-slot">鞋类</div><div class="eq-name">闪电跑鞋（锁定）</div><div class="eq-lv" style="color:var(--t-4);">完成 5km 跑步</div></div>
+      </div>
+    </div>
+
+    <div class="sec-title">
+      <span class="lbl">装备栏 · 主宠 校园幼兽</span>
+    </div>
+    <div class="equip-grid">
+      <div class="equip-slot special" onclick="showEquip('collar')">
+        <div class="eq-ic">💎</div>
+        <div class="eq-info"><div class="eq-slot">项圈</div><div class="eq-name">羁绊星环</div><div class="eq-lv">Lv.2 · 羁绊获取+15%</div></div>
+      </div>
+      <div class="equip-slot" onclick="showEquip('armor')">
+        <div class="eq-ic">🛡️</div>
+        <div class="eq-info"><div class="eq-slot">护具</div><div class="eq-name">训练背心</div><div class="eq-lv">Lv.1 · 防护+3</div></div>
+      </div>
+      <div class="equip-slot empty" onclick="showToast('💡 在隐藏形态线索中可获取')">
+        <div class="eq-ic">🔔</div>
+        <div class="eq-info"><div class="eq-slot">辅助饰品</div><div class="eq-name">未装备</div><div class="eq-lv">隐藏物品</div></div>
+      </div>
+      <div class="equip-slot empty" onclick="showToast('💡 在地标商店可购买')">
+        <div class="eq-ic">🍖</div>
+        <div class="eq-info"><div class="eq-slot">零食包</div><div class="eq-name">未装备</div><div class="eq-lv">地标可获</div></div>
+      </div>
+    </div>
+
+    <div class="priv">本作品为通用校园产品原型 · 与任何具体高校无关联</div>
+  </div>
+</section>
+
+<!-- ============== 探索 (Pokémon GO 风格 · 地图主导) ============== -->
+<section class="panel" id="p-explore">
+
+  <!-- Header bar (location + IoT status) -->
+  <div class="exp-header-bar">
+    <div class="exp-loc-card">
+      <span class="elc-ic">📍</span>
+      <div class="elc-text">
+        <div class="elc-name" id="elc-name">校园中央</div>
+        <div class="elc-stats">2.4km · 3,287 步 · 186 kcal</div>
+      </div>
+    </div>
+    <div class="exp-iot">⌚ 已连接</div>
+  </div>
+
+  <!-- BIG MAP — primary gameplay area -->
+  <div class="map-wrap big">
+    <div id="campus-map"></div>
+    <div class="map-distance" id="map-distance">🔍 点击地标开启任务</div>
+    <div class="map-actions">
+      <button class="map-action" onclick="recenterMap()">📍</button>
+      <button class="map-action primary" onclick="scanForPets()">🔍 扫描</button>
+      <button class="map-action" onclick="showToast('已高亮附近 3 位好友')">👥 好友</button>
+    </div>
+  </div>
+
+  <!-- Smart contextual panel (changes based on selected landmark) -->
+  <div class="ctx-panel">
+    <div class="ctx-loc">
+      <span class="ctx-pin" id="ctx-pin">📍</span>
+      <div class="ctx-loc-info">
+        <div class="ctx-loc-name" id="ctx-name">附近概览</div>
+        <div class="ctx-loc-meta" id="ctx-meta">3 个地点活跃 · 1 只野生宠物 · 3 位好友在运动</div>
+      </div>
+      <span class="ctx-loc-tip" id="ctx-tip">点击地标 ›</span>
+    </div>
+
+    <!-- Smart action grid (auto-locks based on location) -->
+    <div class="ctx-actions" id="ctx-actions">
+      <button class="ca-btn unlocked" onclick="startWorkoutFlow('cardio')">
+        <span class="ca-ic">🏃</span>
+        <div class="ca-info">
+          <div class="ca-name">开始有氧</div>
+          <div class="ca-meta ok">✓ 任意位置可用</div>
+        </div>
+      </button>
+      <button class="ca-btn locked" onclick="lockedAction('需前往健身房才能开始力量训练')">
+        <span class="ca-ic">💪</span>
+        <div class="ca-info">
+          <div class="ca-name">力量训练</div>
+          <div class="ca-meta lk" id="ca-power-meta">🔒 距健身房 80m</div>
+        </div>
+      </button>
+      <button class="ca-btn locked" onclick="lockedAction('需前往篮球场才能发起投篮挑战')">
+        <span class="ca-ic">🏀</span>
+        <div class="ca-info">
+          <div class="ca-name">投篮挑战</div>
+          <div class="ca-meta lk" id="ca-court-meta">🔒 距篮球场 120m</div>
+        </div>
+      </button>
+      <button class="ca-btn locked" onclick="lockedAction('需前往足球场才能开始球类对抗')">
+        <span class="ca-ic">⚽</span>
+        <div class="ca-info">
+          <div class="ca-name">球类对抗</div>
+          <div class="ca-meta lk" id="ca-field-meta">🔒 距足球场 200m</div>
+        </div>
+      </button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr;gap:7px;margin-top:7px;">
+      <button class="ca-btn unlocked" style="background:linear-gradient(135deg,rgba(52,211,153,.18),rgba(52,211,153,.05));border-color:rgba(52,211,153,.5);box-shadow:0 4px 14px rgba(52,211,153,.2);" onclick="startWorkoutFlow('recover')">
+        <span class="ca-ic" style="background:rgba(52,211,153,.18);border-color:rgba(52,211,153,.45);">🌿</span>
+        <div class="ca-info">
+          <div class="ca-name">拉伸恢复</div>
+          <div class="ca-meta ok">✓ 任意位置可用 · 降低疲劳 +恢复值</div>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <!-- Active wild encounter -->
+  <div class="encounter-banner compact" id="encounter-banner" onclick="openCapture()">
+    <div class="eb-emoji" id="eb-emoji">🐰</div>
+    <div class="eb-info">
+      <div class="eb-tag">⚡ 野生遭遇 · 距离 50m</div>
+      <div class="eb-name" id="eb-name">月影兔 · 篮球场附近</div>
+    </div>
+    <button class="eb-go">捕捉</button>
+  </div>
+
+  <!-- BOSS (location-locked) -->
+  <div class="boss compact">
+    <span class="boss-tag">🏛️ 联机 BOSS · 健身房</span>
+    <div class="boss-n">钢铁 Boss · 42 分钟后开战</div>
+    <div class="boss-time">需要 3 名玩家组队 · 必须在健身房附近发起</div>
+    <div class="boss-team">
+      <span class="tn ok">✓ 你 (混合)</span>
+      <span class="tn">需 1× 重装</span>
+      <span class="tn">需 1× 疾风</span>
+    </div>
+  </div>
+
+  <!-- Online friends compact -->
+  <div class="online-strip compact">
+    <div class="os-text"><b>3 位好友</b>正在附近运动</div>
+    <div class="os-avatars">
+      <div class="os-av iron">⚙️</div>
+      <div class="os-av hybrid">✨</div>
+      <div class="os-av wind">🌪️</div>
+    </div>
+  </div>
+
+  <div style="height:14px"></div>
+
+</section>
+
+<!-- ============== 宠物 ============== -->
+<section class="panel" id="p-pet">
+  <div class="std-header">
+    <div class="std-title"><span class="accent">校园灵兽 · 进化系统</span></div>
+    <div class="std-sub">真实运动习惯驱动 · 解锁三大主形态 + 神秘隐藏档案</div>
+  </div>
+
+  <!-- Pet evolution hero (uses 宠物进化演示.png) -->
+  <div class="pet-evo-hero" onclick="openEvoFullscreen()">
+    <span class="pev-tag">EVOLUTION SYSTEM</span>
+    <span class="pev-corner tl"></span>
+    <span class="pev-corner tr"></span>
+    <span class="pev-corner bl"></span>
+    <span class="pev-corner br"></span>
+    <div class="pev-img"><img src="宠物进化演示.png" alt="校园宠物进化系统"/></div>
+    <div class="pev-overlay"></div>
+  </div>
+
+  <!-- 3 evolution form quick chips -->
+  <div class="evo-forms">
+    <div class="evo-form cyan" onclick="showEvoForm('wind')">
+      <div class="ef-ic">⚡</div>
+      <div class="ef-n">疾风形态</div>
+      <div class="ef-meta">有氧主导</div>
+    </div>
+    <div class="evo-form gold" onclick="showEvoForm('iron')">
+      <div class="ef-ic">⚙️</div>
+      <div class="ef-n">重装形态</div>
+      <div class="ef-meta">力量主导</div>
+    </div>
+    <div class="evo-form violet" onclick="showEvoForm('hybrid')">
+      <div class="ef-ic">✨</div>
+      <div class="ef-n">混合形态</div>
+      <div class="ef-meta">均衡发展</div>
+    </div>
+  </div>
+
+  <!-- Pet collection grid -->
+  <div class="sec-title" style="padding:0 14px;"><span class="lbl">我的灵兽图鉴</span><span class="ext" onclick="showToast('已收集 3 / 120 · 探索更多校园角落可遇见新灵兽')">3 / 120 ›</span></div>
+  <div class="pet-bag">
+    <div class="pet-grid">
+      <div class="pet-card main" onclick="selectPet(0)">
+        <div class="badge-main">主宠</div>
+        <div class="pet-em img" style="background-image:url('兔子.png')"></div>
+        <div class="pet-card-n">闪电兔</div>
+        <div class="pet-card-meta">Lv.8 · 羁绊 7</div>
+        <div class="pet-card-tend">疾风偏向</div>
+      </div>
+      <div class="pet-card power" onclick="selectPet(1)">
+        <div class="pet-em img" style="background-image:url('狗狗.png')"></div>
+        <div class="pet-card-n">极光犬</div>
+        <div class="pet-card-meta">Lv.6 · 羁绊 4</div>
+        <div class="pet-card-tend">重装偏向</div>
+      </div>
+      <div class="pet-card balance" onclick="selectPet(2)">
+        <div class="pet-em img" style="background-image:url('鸟.png')"></div>
+        <div class="pet-card-n">星羽雀</div>
+        <div class="pet-card-meta">Lv.4 · 羁绊 2</div>
+        <div class="pet-card-tend">均衡型</div>
+      </div>
+      <div class="pet-card locked" onclick="showToast('🔍 在校园探索中遇见新种族后即可解锁')">
+        <div class="pet-em">❓</div>
+        <div class="pet-card-n">???</div>
+        <div class="pet-card-meta">未发现</div>
+        <div class="pet-card-tend">？？？</div>
+      </div>
+      <div class="pet-card locked" onclick="showToast('🔍 在校园探索中遇见新种族后即可解锁')">
+        <div class="pet-em">❓</div>
+        <div class="pet-card-n">???</div>
+        <div class="pet-card-meta">未发现</div>
+        <div class="pet-card-tend">？？？</div>
+      </div>
+      <div class="pet-card locked" onclick="showToast('🔍 在校园探索中遇见新种族后即可解锁')">
+        <div class="pet-em">❓</div>
+        <div class="pet-card-n">???</div>
+        <div class="pet-card-meta">未发现</div>
+        <div class="pet-card-tend">？？？</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Selected pet detail -->
+  <div class="pet-detail">
+    <div class="pd-row">
+      <div class="pd-portrait img" id="pd-em" style="background-image:url('兔子.png')"></div>
+      <div class="pd-info">
+        <div class="pd-n" id="pd-n">闪电兔</div>
+        <div class="pd-meta" id="pd-meta">Lv.8 · 主宠 · 状态：被你的运动习惯塑形</div>
+        <div class="pd-bond">💞 羁绊值 Lv.<span id="pd-bond">7</span></div>
+      </div>
+    </div>
+    <div class="pd-status">
+      <div class="sb-row">
+        <span class="sb-icon">❤️</span><span class="sb-name">活力</span>
+        <div class="sb-bar"><div class="sb-fill hp" style="width:80%"></div></div>
+        <span class="sb-num">良好</span>
+      </div>
+      <div class="sb-row">
+        <span class="sb-icon">⚡</span><span class="sb-name">饱腹</span>
+        <div class="sb-bar"><div class="sb-fill stamina" style="width:55%"></div></div>
+        <span class="sb-num">中等</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;position:relative;">
+      <button onclick="trainPet()" style="padding:11px;font-family:inherit;cursor:pointer;background:linear-gradient(135deg,var(--gold),#F59E0B);border:none;color:#0a1228;font-weight:800;font-size:12px;letter-spacing:.5px;border-radius:99px;box-shadow:0 4px 14px rgba(251,191,36,.4);">💪 训练宠物 · 120 热量</button>
+      <button onclick="previewEvolution()" style="padding:11px;font-family:inherit;cursor:pointer;background:rgba(255,255,255,.06);border:1px solid rgba(168,85,247,.4);color:#C084FC;font-weight:700;font-size:12px;letter-spacing:.5px;border-radius:99px;">🔮 进化预览</button>
+    </div>
+  </div>
+
+  <!-- Tendency (vague — no explicit % per request) -->
+  <div class="sec-title" style="padding:0 14px;"><span class="lbl">进化倾向</span><span class="ext">仅显示偏好</span></div>
+  <div class="tend-card">
+    <div class="tend-row">
+      <span class="tend-icon">🌪️</span><span class="tend-name">疾风系</span>
+      <div class="tend-bar"><div class="tend-fill wind" id="tend-wind" style="width:80%"></div></div>
+      <span class="tend-tag" id="tend-wind-t">主导</span>
+    </div>
+    <div class="tend-row">
+      <span class="tend-icon">⚙️</span><span class="tend-name">重装系</span>
+      <div class="tend-bar"><div class="tend-fill iron" id="tend-iron" style="width:18%"></div></div>
+      <span class="tend-tag" id="tend-iron-t">较弱</span>
+    </div>
+    <div class="tend-row">
+      <span class="tend-icon">✨</span><span class="tend-name">混合系</span>
+      <div class="tend-bar"><div class="tend-fill hybrid" id="tend-hybrid" style="width:8%"></div></div>
+      <span class="tend-tag" id="tend-hybrid-t">微弱</span>
+    </div>
+    <div style="font-size:10px;color:var(--t-3);margin-top:10px;line-height:1.6;">
+      💡 你的运动习惯正在塑形主宠的进化方向。多元的训练结构会带来更稳定的形态。
+    </div>
+  </div>
+
+  <!-- Hidden forms — vague hints only -->
+  <div class="sec-title" style="padding:0 14px;"><span class="lbl">⨉ 神秘档案</span><span class="ext">线索 1 / 12</span></div>
+  <div class="sec-sub" style="padding:0 18px;">某些形态只在特定时刻、特定地点、或特定关系中现身。</div>
+
+  <div class="hf-grid">
+    <div class="hf-card found" onclick="openHiddenForm('dawn')">
+      <div class="hf-sil">🌅</div>
+      <div class="hf-name">？？？</div>
+      <div class="hf-clue">"晨光刚触及草地的那刻……"</div>
+      <div class="hf-prog">
+        <span>残片</span>
+        <div class="hf-pbar"><div class="hf-pfill" id="hf-d-fill" style="width:33%"></div></div>
+        <span id="hf-d-st">1/3</span>
+      </div>
+    </div>
+
+    <div class="hf-card" id="hf-card-forge" onclick="openHiddenForm('forge')">
+      <div class="hf-sil">🔥</div>
+      <div class="hf-name">？？？</div>
+      <div class="hf-clue">"铁器的回响与脚步声同时响起。"</div>
+      <div class="hf-prog">
+        <span>残片</span>
+        <div class="hf-pbar"><div class="hf-pfill" id="hf-f-fill" style="width:0%"></div></div>
+        <span id="hf-f-st">0/3</span>
+      </div>
+    </div>
+
+    <div class="hf-card found" onclick="openHiddenForm('twin')">
+      <div class="hf-sil">⊕</div>
+      <div class="hf-name">？？？</div>
+      <div class="hf-clue">"它似乎在等待另一个人的影子。"</div>
+      <div class="hf-prog">
+        <span>共鸣</span>
+        <div class="hf-pbar"><div class="hf-pfill" id="hf-t-fill" style="width:67%"></div></div>
+        <span id="hf-t-st">2/3</span>
+      </div>
+    </div>
+
+    <div class="hf-card" onclick="openHiddenForm('apex')">
+      <div class="hf-sil">★</div>
+      <div class="hf-name">？？？</div>
+      <div class="hf-clue">"风与铁，需要长久的并肩。"</div>
+      <div class="hf-prog">
+        <span>残片</span>
+        <div class="hf-pbar"><div class="hf-pfill" id="hf-a-fill" style="width:0%"></div></div>
+        <span id="hf-a-st">0/3</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== 好友 ============== -->
+<section class="panel" id="p-friends">
+  <div class="std-header">
+    <div class="std-title"><span class="accent">好友 & 联机</span></div>
+    <div class="std-sub">2 位在线 · 工学院阵营贡献 <span id="fac-num">180</span> · 宿舍联盟第 2 名</div>
+  </div>
+
+  <!-- Twin Bond -->
+  <div class="bond-card">
+    <div class="bond-t">⊕ 双生羁绊形态进度</div>
+    <div class="bond-d">和同一名好友完成 3 次共鸣运动后，可能触发某种特殊形态。</div>
+    <div class="bond-pg">
+      <div class="bond-step done"></div>
+      <div class="bond-step done"></div>
+      <div class="bond-step" id="bond-3"></div>
+    </div>
+  </div>
+
+  <div class="sec-title" style="padding:0 14px;"><span class="lbl">在线好友</span><span class="ext">2 / 3</span></div>
+
+  <div class="fr-card online rec" id="fr-jason">
+    <div class="fr-av iron">⚙️</div>
+    <div class="fr-info">
+      <div class="fr-row1">
+        <span class="fr-n">Jason</span>
+        <span class="fr-form-tag" style="color:var(--rose);background:rgba(244,114,182,.12);border-color:rgba(244,114,182,.3);">重装核心</span>
+      </div>
+      <div class="fr-st online">🟢 正在健身房训练 · 共鸣机会</div>
+    </div>
+    <button class="fr-btn" id="invite-jason" onclick="inviteJason()">邀请共鸣</button>
+  </div>
+
+  <div class="fr-card online">
+    <div class="fr-av hybrid">✨</div>
+    <div class="fr-info">
+      <div class="fr-row1">
+        <span class="fr-n">Mia</span>
+        <span class="fr-form-tag" style="color:var(--gold);background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.3);">混合运动者</span>
+      </div>
+      <div class="fr-st online">🟢 在线 · 适合 BOSS 协作</div>
+    </div>
+    <button class="fr-btn" onclick="showToast('已发送邀请给 Mia')">邀请</button>
+  </div>
+
+  <div class="fr-card">
+    <div class="fr-av wind">🌪️</div>
+    <div class="fr-info">
+      <div class="fr-row1">
+        <span class="fr-n">Alex</span>
+        <span class="fr-form-tag">疾风跑者</span>
+      </div>
+      <div class="fr-st">2 小时前 · 足球场 · 离线</div>
+    </div>
+    <button class="fr-btn" onclick="showToast('已留言给 Alex')">留言</button>
+  </div>
+
+  <div style="margin:14px;padding:14px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.15);border-radius:14px;font-size:11px;color:var(--t-3);line-height:1.6;">
+    💡 联机玩法移到了「探索」Tab：在那里可以看到附近运动的好友、加入 BOSS 战、触发共鸣事件。
+  </div>
+</section>
+
+</main>
+
+<nav id="bottomnav">
+  <button class="nav-i active" data-tab="role" onclick="switchTab('role')">
+    <span class="nav-ic">👤</span><span class="nav-l">角色</span>
+  </button>
+  <button class="nav-i" data-tab="explore" onclick="switchTab('explore')">
+    <span class="nav-ic">🗺️</span><span class="nav-l">探索</span>
+  </button>
+  <button class="nav-i" data-tab="pet" onclick="switchTab('pet')">
+    <span class="nav-ic">🦊</span><span class="nav-l">宠物</span>
+  </button>
+  <button class="nav-i" data-tab="friends" onclick="switchTab('friends')">
+    <span class="nav-ic">🛡️</span><span class="nav-l">好友</span>
+  </button>
+</nav>
+
+</div>
+
+<div id="mask" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal-body"></div>
+</div>
+
+<div id="rewardpop">
+  <div class="rp-title" id="rp-title">训练完成</div>
+  <div class="rp-list" id="rp-list"></div>
+  <button class="rp-close" onclick="closeReward()">继续</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ===== STATE =====
+const PETS_DATA = [
+  { id:'rabbit', img:'兔子.png', name:'闪电兔',  tend:'疾风偏向 · 速度↑机动↑',  lv:8, bond:7, isMain:true },
+  { id:'dog',    img:'狗狗.png', name:'极光犬',  tend:'重装偏向 · 力量↑稳定↑',  lv:6, bond:4 },
+  { id:'bird',   img:'鸟.png',   name:'星羽雀',  tend:'均衡型 · 全面发展',       lv:4, bond:2 },
+];
+
+const INITIAL = {
+  user: { name:'Haoyuan', fatigue:68, twinForm:'混合运动者', streak:5, stamina:72, power:56, balance:45, recovery:60 },
+  resources: { energy:320, powerCore:4, captureOrb:2, recovery:60, factionContribution:180, bondLevel:7 },
+  pet: { evolution:{wind:80, iron:18, hybrid:8}, secretClues:{dawnTrack:1, forge:0, twinBond:2, hybridApex:0} },
+  ecosystem: { type:'overload' },
+  social: { invitedJason:false, twinBondProgress:2 },
+  flags: { powerWorkoutDone:false, cardioDone:false },
+  iot: { connected:true, device:'Apple Watch' },
+  encounter: { active:true, species:'rabbit' }
+};
+let state = JSON.parse(JSON.stringify(INITIAL));
+const STORE_KEY = 'fitventure_state_v140';
+function save(){ try{localStorage.setItem(STORE_KEY, JSON.stringify(state));}catch(e){} }
+function load(){ try{ const s=localStorage.getItem(STORE_KEY); if(s) state=JSON.parse(s);}catch(e){} }
+function $(id){ return document.getElementById(id); }
+function setT(id,v){ const e=$(id); if(e) e.textContent=v; }
+function setW(id,v){ const e=$(id); if(e) e.style.width=v; }
+function addC(id,c){ const e=$(id); if(e) e.classList.add(c); }
+function rmvC(id,c){ const e=$(id); if(e) e.classList.remove(c); }
+
+// ===== TAB =====
+function switchTab(name){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-i').forEach(b=>b.classList.remove('active'));
+  $('p-'+name).classList.add('active');
+  document.querySelector(`.nav-i[data-tab="${name}"]`).classList.add('active');
+  if(name==='explore') initMap();
+}
+
+// ===== RENDER =====
+function tendencyTag(v){
+  if(v>=70) return '主导';
+  if(v>=40) return '强势';
+  if(v>=20) return '中等';
+  if(v>=10) return '较弱';
+  return '微弱';
+}
+
+function render(){
+  // Fatigue & status
+  setT('fat-num', state.user.fatigue);
+  setW('fat-fill', state.user.fatigue + '%');
+  setT('twin-form', state.user.twinForm);
+  setT('twin-form-2', state.user.twinForm);
+  setT('streak-tag', '🔥 连续 ' + state.user.streak + ' 天');
+  setT('ts-sta', state.user.stamina);
+  setT('ts-pow', state.user.power);
+  setT('ts-bal', state.user.balance);
+  setT('ts-rec', state.user.recovery);
+  setT('ts-str', state.user.streak);
+
+  // Resource strip (compact, on role page)
+  setT('r-energy', state.resources.energy);
+  setT('r-power', state.resources.powerCore);
+  setT('r-orb', state.resources.captureOrb);
+  setT('r-recv', state.resources.recovery);
+  setT('r-streak', state.user.streak);
+  setT('r-fac', state.resources.factionContribution);
+  setT('r-bond', state.resources.bondLevel);
+
+  // Ecosystem chip
+  const ecoChip = $('eco-chip');
+  if(ecoChip){
+    if(state.ecosystem.type === 'overload'){
+      ecoChip.textContent = '⚠️ 疾风过载 · 捕捉 −10%';
+      ecoChip.style.cssText = 'color:var(--rose);background:rgba(244,114,182,.12);border:1px solid rgba(244,114,182,.45);padding:3px 10px;border-radius:99px;font-size:10px;font-weight:600;letter-spacing:.3px;';
+    } else if(state.ecosystem.type === 'lean'){
+      ecoChip.textContent = '💨 疾风偏向 · 已缓解';
+      ecoChip.style.cssText = 'color:var(--cy-1);background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.45);padding:3px 10px;border-radius:99px;font-size:10px;font-weight:600;letter-spacing:.3px;';
+    } else {
+      ecoChip.textContent = '✨ 生态平衡';
+      ecoChip.style.cssText = 'color:var(--mint);background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.45);padding:3px 10px;border-radius:99px;font-size:10px;font-weight:600;letter-spacing:.3px;';
+    }
+  }
+
+  // Pet tendency
+  const e = state.pet.evolution;
+  setW('tend-wind', e.wind + '%');
+  setW('tend-iron', e.iron + '%');
+  setW('tend-hybrid', e.hybrid + '%');
+  setT('tend-wind-t', tendencyTag(e.wind));
+  setT('tend-iron-t', tendencyTag(e.iron));
+  setT('tend-hybrid-t', tendencyTag(e.hybrid));
+  setT('pd-bond', state.resources.bondLevel);
+
+  // Secret clues
+  const sc = state.pet.secretClues;
+  setW('hf-d-fill', (sc.dawnTrack/3*100)+'%');
+  setT('hf-d-st', sc.dawnTrack + '/3');
+  setW('hf-f-fill', (sc.forge/3*100)+'%');
+  setT('hf-f-st', sc.forge + '/3');
+  if(sc.forge>0) addC('hf-card-forge', 'found');
+  setW('hf-t-fill', (sc.twinBond/3*100)+'%');
+  setT('hf-t-st', sc.twinBond + '/3');
+  setW('hf-a-fill', (sc.hybridApex/3*100)+'%');
+  setT('hf-a-st', sc.hybridApex + '/3');
+
+  setT('fac-num', state.resources.factionContribution);
+
+  const ib = $('invite-jason');
+  if(ib){
+    if(state.social.invitedJason){
+      ib.textContent = '已发送 ✓'; ib.classList.add('invited');
+      addC('bond-3', 'pending');
+    } else {
+      ib.textContent = '邀请共鸣'; ib.classList.remove('invited');
+      rmvC('bond-3', 'pending');
+    }
+  }
+
+  // IoT
+  const ios = $('iot-status');
+  if(ios){
+    if(state.iot.connected){
+      ios.classList.remove('disconnected');
+      setT('iot-label', '⌚ ' + state.iot.device + ' · 已连接');
+    } else {
+      ios.classList.add('disconnected');
+      setT('iot-label', '⌚ 未连接手环');
+    }
+  }
+}
+
+// ===== MAP (Leaflet + OSM dark tiles, 免 API key) =====
+let map = null, mapInited = false;
+function initMap(){
+  if(mapInited || typeof L === 'undefined') return;
+  // Generic university area coordinates — labels are still 通用 (足球场 / 健身房…)
+  const center = [40.0022, 116.3290];
+  map = L.map('campus-map', {
+    zoomControl:false, attributionControl:true,
+    dragging:true, scrollWheelZoom:false, doubleClickZoom:true
+  }).setView(center, 16);
+
+  // Dark theme tiles — CartoDB Dark Matter (free, no API key)
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom:19, attribution:'© OpenStreetMap · CartoDB',
+  }).addTo(map);
+
+  // === 切换 Google Maps：若有 API Key 可注释上面、启用以下：
+  //   <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_KEY&loading=async"></sc' + 'ript>
+  //   <script src="https://unpkg.com/leaflet.gridlayer.googlemutant@0.13.5/Leaflet.GoogleMutant.js"></sc' + 'ript>
+  //   L.gridLayer.googleMutant({ type:'roadmap' }).addTo(map);
+
+  // Landmarks
+  const lms = [
+    { id:'gym',     lat:40.0030, lng:116.3265, name:'健身房',  emoji:'💪', color:'rose' },
+    { id:'track',   lat:40.0010, lng:116.3290, name:'足球场',  emoji:'⚽', color:'mint' },
+    { id:'library', lat:40.0025, lng:116.3275, name:'图书馆',  emoji:'📚', color:'violet' },
+    { id:'dorm',    lat:40.0035, lng:116.3320, name:'宿舍区',  emoji:'🏠', color:'' },
+    { id:'lawn',    lat:40.0030, lng:116.3300, name:'篮球场',  emoji:'🏀', color:'gold' },
+  ];
+  lms.forEach(lm=>{
+    const ic = L.divIcon({
+      className:'fv-marker',
+      html:`<div class="fv-marker-pin ${lm.color}">${lm.emoji}</div><div class="fv-marker-label">${lm.name}</div>`,
+      iconSize:[80,60], iconAnchor:[40,50]
+    });
+    L.marker([lm.lat,lm.lng],{icon:ic}).addTo(map).on('click',()=>{
+      selectMapLandmark(lm.id);
+      map.setView([lm.lat,lm.lng], 17, {animate:true});
+    });
+  });
+
+  // Wild encounter (rabbit near 篮球场)
+  const wildIc = L.divIcon({
+    className:'fv-wild',
+    html:'<div class="fv-wild-pin">🐰</div><div class="fv-wild-tag">野生</div>',
+    iconSize:[60,46], iconAnchor:[30,40]
+  });
+  L.marker([40.0033, 116.3304],{icon:wildIc}).addTo(map).on('click',openCapture);
+
+  // Friends
+  const friends = [
+    { lat:40.0029, lng:116.3266, name:'J', cls:'iron' },
+    { lat:40.0008, lng:116.3289, name:'A', cls:'wind' },
+    { lat:40.0027, lng:116.3320, name:'M', cls:'hybrid' },
+  ];
+  friends.forEach(f=>{
+    const ic = L.divIcon({
+      className:'fv-friend',
+      html:`<div class="fv-friend-pin">${f.name}</div>`,
+      iconSize:[28,28], iconAnchor:[14,14]
+    });
+    L.marker([f.lat,f.lng],{icon:ic}).addTo(map).on('click',()=>{ switchTab('friends'); });
+  });
+
+  // Player
+  const pIc = L.divIcon({ className:'', html:'<div class="fv-player-pin"></div>', iconSize:[24,24], iconAnchor:[12,12] });
+  L.marker(center,{icon:pIc}).addTo(map);
+
+  mapInited = true;
+}
+function recenterMap(){
+  if(map) map.setView([40.0022,116.3290],16,{animate:true});
+  selectMapLandmark(null);
+}
+function scanForPets(){ showToast('🔍 已扫描 200m 范围 · 1 只野生宠物'); }
+
+// === Landmark info (for ctx panel) ===
+const LANDMARK_INFO = {
+  gym:     { name:'健身房',  emoji:'💪', desc:'重装信号活跃 · 力量训练可用 · 联机 BOSS 入口', dist:'已抵达' },
+  track:   { name:'足球场',  emoji:'⚽', desc:'疾风宠物出没 · 球类对抗 + 晨曦线索', dist:'已抵达' },
+  library: { name:'图书馆',  emoji:'📚', desc:'隐藏信号 · 神秘档案残片可能浮现', dist:'已抵达' },
+  dorm:    { name:'宿舍区',  emoji:'🏠', desc:'阵营任务进行中 · 工学院联盟', dist:'已抵达' },
+  lawn:    { name:'篮球场',  emoji:'🏀', desc:'投篮挑战 · 三人对抗 + 个人路线', dist:'已抵达' }
+};
+
+function selectMapLandmark(loc){
+  if(!loc){
+    $('ctx-pin').textContent = '📍';
+    $('ctx-name').textContent = '附近概览';
+    $('ctx-meta').textContent = '3 个地点活跃 · 1 只野生宠物 · 3 位好友在运动';
+    $('ctx-tip').textContent = '点击地标 ›';
+    $('elc-name').textContent = '校园中央';
+    $('map-distance').textContent = '🔍 点击地标开启任务';
+    updateActionStates(null);
+    return;
+  }
+  const info = LANDMARK_INFO[loc];
+  $('ctx-pin').textContent = info.emoji;
+  $('ctx-name').textContent = info.name + ' · 你已抵达';
+  $('ctx-meta').textContent = info.desc;
+  $('ctx-tip').textContent = info.dist;
+  $('elc-name').textContent = info.name;
+  $('map-distance').textContent = '📍 ' + info.name + ' · 任务已激活';
+  updateActionStates(loc);
+}
+
+function updateActionStates(loc){
+  const btns = document.querySelectorAll('#ctx-actions .ca-btn');
+  if(btns.length < 4) return;
+  const [bCardio, bPower, bCourt, bField] = btns;
+
+  // Cardio — always available
+  // (no change needed)
+
+  // Power — only at gym
+  const atGym = loc === 'gym';
+  bPower.classList.toggle('unlocked', atGym);
+  bPower.classList.toggle('power', atGym);
+  bPower.classList.toggle('locked', !atGym);
+  bPower.onclick = atGym ? ()=>startWorkoutFlow('power') : ()=>lockedAction('需前往健身房才能开始力量训练');
+  $('ca-power-meta').textContent = atGym ? '✓ 此处可用' : '🔒 仅在健身房可用';
+  $('ca-power-meta').className = atGym ? 'ca-meta ok' : 'ca-meta lk';
+
+  // Court — only at lawn (basketball)
+  const atCourt = loc === 'lawn';
+  bCourt.classList.toggle('unlocked', atCourt);
+  bCourt.classList.toggle('gold', atCourt);
+  bCourt.classList.toggle('locked', !atCourt);
+  bCourt.onclick = atCourt ? ()=>startBallGame('basketball') : ()=>lockedAction('需前往篮球场才能发起投篮挑战');
+  $('ca-court-meta').textContent = atCourt ? '✓ 此处可用' : '🔒 仅在篮球场可用';
+  $('ca-court-meta').className = atCourt ? 'ca-meta ok' : 'ca-meta lk';
+
+  // Field — only at track (soccer)
+  const atField = loc === 'track';
+  bField.classList.toggle('unlocked', atField);
+  bField.classList.toggle('gold', atField);
+  bField.classList.toggle('locked', !atField);
+  bField.onclick = atField ? ()=>startBallGame('soccer') : ()=>lockedAction('需前往足球场才能开始球类对抗');
+  $('ca-field-meta').textContent = atField ? '✓ 此处可用' : '🔒 仅在足球场可用';
+  $('ca-field-meta').className = atField ? 'ca-meta ok' : 'ca-meta lk';
+}
+
+function lockedAction(msg){ showToast('🔒 ' + msg); }
+
+function startBallGame(kind){
+  const data = kind==='basketball'
+    ? {tag:'🏀 投篮挑战', name:'篮球场 · 投篮挑战', desc:'连续完成 10 次投篮，记录命中率。完成后获得奖励。', cta:'开始 10 次投篮', rewards:['🔥 热量能量 +120','💞 羁绊值 +1','🏀 个人路线 +1','😓 疲劳值 +5']}
+    : {tag:'⚽ 球类对抗', name:'足球场 · 三人对抗', desc:'与好友 3v3 对抗 20 分钟。强度高、回报丰厚。', cta:'开始 20 分钟对抗', rewards:['🔥 热量能量 +200','💪 力量 +2','💞 羁绊值 +2','😓 疲劳值 +10']};
+  $('modal-body').innerHTML = `
+    <div class="handle"></div>
+    <span class="modal-tag gold">${data.tag}</span>
+    <h2>${data.name}</h2>
+    <div class="modal-desc">${data.desc}</div>
+    <div class="rew-grid">${data.rewards.map(r=>`<div class="rew-i">${r}</div>`).join('')}</div>
+    <button class="modal-cta" onclick="completeBallGame('${kind}')">${data.cta}</button>
+    <button class="modal-2nd" onclick="closeModal()">取消</button>`;
+  $('mask').classList.add('show');
+}
+
+function completeBallGame(kind){
+  closeModal();
+  if(kind==='basketball'){
+    state.resources.energy += 120; state.resources.bondLevel = Math.min(20, state.resources.bondLevel + 1);
+    state.user.fatigue = Math.min(100, state.user.fatigue + 5);
+    save(); render();
+    showReward('🏀 投篮挑战完成', [{l:'🔥 热量能量', v:'+120', c:'up'},{l:'💞 羁绊值', v:'+1', c:'gd'},{l:'🏀 个人路线', v:'Lv.2 → 维持', c:'cy'},{l:'😓 疲劳值', v:'+5', c:'dn'}]);
+  } else {
+    state.resources.energy += 200; state.user.power = Math.min(100, state.user.power + 2);
+    state.resources.bondLevel = Math.min(20, state.resources.bondLevel + 2);
+    state.user.fatigue = Math.min(100, state.user.fatigue + 10);
+    save(); render();
+    showReward('⚽ 球类对抗完成', [{l:'🔥 热量能量', v:'+200', c:'up'},{l:'💪 力量', v:'+2', c:'gd'},{l:'💞 羁绊值', v:'+2', c:'gd'},{l:'😓 疲劳值', v:'+10', c:'dn'}]);
+  }
+}
+
+// ===== MODAL =====
+function closeModal(){ $('mask').classList.remove('show'); }
+
+function openLandmark(loc){
+  let html = '';
+  if(loc==='gym'){
+    const done = state.flags.powerWorkoutDone;
+    html = `
+      <div class="handle"></div>
+      <span class="modal-tag rose">💪 重装信号</span>
+      <h2>健身房</h2>
+      <div class="modal-desc">${done?'今日已完成力量训练。':'在这里完成一次 35 分钟力量训练，会触发隐藏档案中的某个回响。'}</div>
+      <div class="rew-grid">
+        <div class="rew-i">⚡ 力量核心 +4</div>
+        <div class="rew-i">🔮 捕捉球 +2</div>
+        <div class="rew-i">😓 疲劳值 +10</div>
+        <div class="rew-i">🔍 神秘档案 +1</div>
+      </div>
+      <button class="modal-cta warn" onclick="completePowerWorkout()">模拟记录 35 分钟力量训练</button>
+      <button class="modal-2nd" onclick="closeModal()">取消</button>`;
+  } else if(loc==='track'){
+    html = `
+      <div class="handle"></div>
+      <span class="modal-tag mint">⚽ 足球场</span>
+      <h2>足球场</h2>
+      <div class="modal-desc">检测到疾风信号。${state.pet.secretClues.forge===1?'刚刚的金属回响似乎需要风的应答。':'清晨与黄昏的风向不同……'}</div>
+      <div class="rew-grid">
+        <div class="rew-i">🔥 热量能量 +160</div>
+        <div class="rew-i">💞 羁绊值 +1</div>
+        <div class="rew-i">😓 疲劳值 +6</div>
+        <div class="rew-i">🌅 神秘档案 +?</div>
+      </div>
+      <button class="modal-cta" onclick="completeCardio()">模拟记录 20 分钟轻跑</button>
+      <button class="modal-2nd" onclick="closeModal()">取消</button>`;
+  } else if(loc==='library'){
+    html = `
+      <div class="handle"></div>
+      <span class="modal-tag violet">📚 隐藏信号</span>
+      <h2>图书馆</h2>
+      <div class="modal-desc">这里安静得过分。你的校园幼兽悄悄停下脚步，似乎在听什么。多次靠近也许会让某个声音变清晰一些。</div>
+      <button class="modal-cta" onclick="closeModal()">了解</button>`;
+  } else if(loc==='dorm'){
+    html = `
+      <div class="handle"></div>
+      <span class="modal-tag">🏠 阵营任务</span>
+      <h2>宿舍区</h2>
+      <div class="modal-desc">工学院宿舍周挑战进行中。本周排名第 2，距第 1 还需 320 阵营贡献值。</div>
+      <button class="modal-cta" onclick="switchTab('friends'); closeModal()">前往好友页</button>
+      <button class="modal-2nd" onclick="closeModal()">关闭</button>`;
+  } else if(loc==='lawn'){
+    html = `
+      <div class="handle"></div>
+      <span class="modal-tag gold">🏀 篮球场</span>
+      <h2>篮球场</h2>
+      <div class="modal-desc">你在这里的个人路线达到 Lv.2。可以接受三人对抗任务，或与好友共同完成投篮挑战。</div>
+      <button class="modal-cta" onclick="closeModal()">了解</button>`;
+  }
+  $('modal-body').innerHTML = html;
+  $('mask').classList.add('show');
+}
+
+function openHiddenForm(form){
+  const sc = state.pet.secretClues;
+  // Vague hints — never explicitly say what to do, just poetic suggestions
+  const data = {
+    dawn:{
+      title:'？？？',
+      tag:'⏰ 时间 · 📍 地点',
+      clue:'"晨光刚触及草地的那刻，它会停下脚步去听风的方向。"',
+      progress:sc.dawnTrack,
+      hint:'有些时刻只在天还没完全亮的时候出现。也许早一点出门看看？'
+    },
+    forge:{
+      title:'？？？',
+      tag:'📍 地点 · ⚙️ 行为序列',
+      clue:'"它同时聆听铁器的节奏，和远处脚步的回响。"',
+      progress:sc.forge,
+      hint:'某种节奏需要两种声音先后出现。试试不同顺序的训练。'
+    },
+    twin:{
+      title:'？？？',
+      tag:'🤝 社交',
+      clue:'"它无法独自觉醒。"',
+      progress:sc.twinBond,
+      hint:state.social.invitedJason?'你已经向 Jason 发出召唤……剩下的是等待。':'有些羁绊不靠数据堆出来。或许需要一起完成一些事。'
+    },
+    apex:{
+      title:'？？？',
+      tag:'⚖️ 长期均衡',
+      clue:'"风与铁，需要长久的并肩。"',
+      progress:sc.hybridApex,
+      hint:'快不是它要的，慢也不是。也许是某种平衡。'
+    }
+  }[form];
+
+  $('modal-body').innerHTML = `
+    <div class="handle"></div>
+    <span class="modal-tag violet">${data.tag}</span>
+    <h2>${data.title}</h2>
+    <div class="modal-quote">${data.clue}</div>
+    <div style="font-size:11px;color:var(--t-3);margin-bottom:6px;">线索残片 <b style="color:#D946EF;font-size:13px;">${data.progress} / 3</b></div>
+    <div class="hf-pbar" style="height:5px;margin-bottom:14px;"><div class="hf-pfill" style="width:${data.progress/3*100}%"></div></div>
+    <div style="font-size:12px;color:var(--t-2);padding:10px 12px;background:rgba(168,85,247,.06);border-radius:10px;line-height:1.7;">
+      <span style="color:#C084FC;">微弱的提示 ›</span><br>${data.hint}
+    </div>
+    <button class="modal-2nd" style="margin-top:14px" onclick="closeModal()">合上档案</button>`;
+  $('mask').classList.add('show');
+}
+
+function openPrivacy(){
+  $('modal-body').innerHTML = `
+    <div class="handle"></div>
+    <h2>🔒 隐私说明</h2>
+    <div class="modal-desc">FitVenture 涉及位置、运动和校园社交数据。本 MVP 原型仅使用前端模拟数据，不会上传任何真实信息。</div>
+    <ul style="font-size:12px;color:var(--t-2);line-height:1.9;padding-left:20px;">
+      <li>最小化采集 · 仅采集核心闭环必要数据</li>
+      <li>用户可随时删除运动记录、位置和账号</li>
+      <li>默认隐藏精确实时位置</li>
+      <li>排行榜仅展示贡献值，不展示体重 / 体脂</li>
+      <li>未成年用户需要额外保护和监护人同意</li>
+    </ul>
+    <p style="font-size:10.5px;color:var(--t-4);margin-top:14px;line-height:1.6;">本 Demo 使用通用校园模型（足球场 / 健身房 / 图书馆 / 宿舍区 / 篮球场等通用建筑），仅为产品原型，与任何具体高校无关联。</p>
+    <button class="modal-2nd" style="margin-top:14px" onclick="closeModal()">了解</button>`;
+  $('mask').classList.add('show');
+}
+
+function showEquip(slot){
+  const data = {
+    weapon:{ic:'🥊', name:'能量手套', lv:2, desc:'根据近期力量训练自动充能。每次完成无氧训练增加能量。', stat:'力量 +8 · 捕捉球产出 +5%'},
+    top:{ic:'🦺', name:'风轨战甲', lv:1, desc:'轻量化训练战甲，跑动时减少风阻。', stat:'耐力 +5 · 探索范围 +5%'},
+    bottom:{ic:'👖', name:'疾风战裤', lv:1, desc:'透气速干，适合长时间运动。', stat:'速度 +4'},
+    collar:{ic:'💎', name:'羁绊星环', lv:2, desc:'羁绊值的获取速度提升。陪宠运动时主宠也获得加成。', stat:'羁绊获取 +15% · 训练效率 +5%'},
+    armor:{ic:'🛡️', name:'训练背心', lv:1, desc:'保护宠物在高强度训练时的活力。', stat:'防护 +3 · 疲劳累积 -5%'}
+  }[slot];
+  if(!data) return;
+  $('modal-body').innerHTML = `
+    <div class="handle"></div>
+    <span class="modal-tag gold">装备详情</span>
+    <h2>${data.ic} ${data.name}</h2>
+    <div style="font-size:11px;color:var(--cy-1);margin-bottom:10px;">Lv.${data.lv} · ${data.stat}</div>
+    <div class="modal-desc">${data.desc}</div>
+    <button class="modal-cta" onclick="showToast('已切换主装备');closeModal()">设为主装备</button>
+    <button class="modal-2nd" onclick="closeModal()">关闭</button>`;
+  $('mask').classList.add('show');
+}
+
+// ===== ENCOUNTERS =====
+function openCapture(){
+  if(!state.encounter.active){ showToast('附近暂无野生宠物'); return; }
+  $('modal-body').innerHTML = `
+    <div class="handle"></div>
+    <div class="cap-hero">
+      <div class="cap-em">🐰</div>
+      <div class="cap-name">野生 · 月影兔</div>
+      <div class="cap-meta">稀有度 ★★ · 疾风偏向 · 距离 50m</div>
+    </div>
+    <div class="cap-rate">
+      <div class="cap-rate-label"><span>捕捉成功率</span><span style="color:var(--mint);font-weight:700;">62%</span></div>
+      <div class="cap-rate-bar"><div class="cap-rate-fill" style="width:62%"></div></div>
+      <div style="font-size:9.5px;color:var(--t-3);margin-top:6px;">主宠 +5% · 羁绊星环 +3% · 月夜增益 +2%</div>
+    </div>
+    <button class="modal-cta violet" onclick="tryCapture()">投出捕捉球（剩 ${state.resources.captureOrb}）</button>
+    <button class="modal-2nd" onclick="closeModal()">逃离</button>`;
+  $('mask').classList.add('show');
+}
+
+function tryCapture(){
+  closeModal();
+  if(state.resources.captureOrb < 1){ showToast('捕捉球不足，去健身房训练获得'); return; }
+  state.resources.captureOrb -= 1;
+  const success = Math.random() < 0.62;
+  if(success){
+    state.encounter.active = false;
+    document.getElementById('encounter-banner').style.display = 'none';
+    save(); render();
+    showReward('🎉 捕获成功！', [
+      {l:'🐰 月影兔', v:'已加入图鉴', c:'vi'},
+      {l:'🔮 捕捉球', v:'-1（剩 '+state.resources.captureOrb+'）', c:'dn'},
+      {l:'💞 羁绊', v:'+1', c:'gd'},
+      {l:'📖 图鉴', v:'4 → 5 / 12', c:'cy'}
+    ]);
+  } else {
+    save(); render();
+    showToast('💨 月影兔挣脱了！再试一次或先训练提升成功率');
+  }
+}
+
+// ===== WORKOUT FLOW =====
+function startWorkoutFlow(type){
+  if(type==='cardio') openLandmark('track');
+  else if(type==='power') openLandmark('gym');
+  else {
+    state.user.fatigue = Math.max(0, state.user.fatigue - 12);
+    state.resources.recovery += 15;
+    save(); render();
+    showReward('🌿 拉伸完成', [
+      {l:'🌿 恢复值', v:'+15', c:'up'},
+      {l:'😓 疲劳值', v:'-12', c:'up'},
+      {l:'💡 次日训练收益', v:'+10%', c:'gd'}
+    ]);
+  }
+}
+
+function completePowerWorkout(){
+  closeModal();
+  if(state.flags.powerWorkoutDone){ showToast('今日已记录力量训练'); return; }
+  state.resources.powerCore += 4;
+  state.resources.captureOrb += 2;
+  state.user.fatigue = Math.min(100, state.user.fatigue + 10);
+  state.user.power = Math.min(100, state.user.power + 4);
+  state.pet.evolution.wind = 72; state.pet.evolution.iron = 22; state.pet.evolution.hybrid = 6;
+  state.ecosystem.type = 'lean';
+  state.pet.secretClues.forge = 1;
+  state.flags.powerWorkoutDone = true;
+  save(); render();
+  showReward('🔥 训练完成', [
+    {l:'⚡ 力量核心', v:'+4', c:'up'},
+    {l:'🔮 捕捉球', v:'+2', c:'up'},
+    {l:'😓 疲劳值', v:'68 → 78', c:'dn'},
+    {l:'🦊 主宠倾向', v:'微弱变化', c:'cy'},
+    {l:'🔍 神秘档案', v:'+1 残片', c:'vi'}
+  ]);
+}
+
+function completeCardio(){
+  closeModal();
+  state.resources.energy += 160;
+  state.resources.bondLevel = Math.min(20, state.resources.bondLevel + 1);
+  state.user.fatigue = Math.min(100, state.user.fatigue + 6);
+  state.user.stamina = Math.min(100, state.user.stamina + 3);
+  let lines = [
+    {l:'🔥 热量能量', v:'+160', c:'up'},
+    {l:'💞 羁绊值', v:'Lv +1', c:'gd'},
+    {l:'😓 疲劳值', v:'+6', c:'dn'}
+  ];
+  if(state.pet.secretClues.forge === 1){
+    state.pet.secretClues.forge = 2;
+    lines.push({l:'🔍 神秘档案', v:'+1 残片', c:'vi'});
+  } else if(state.pet.secretClues.dawnTrack === 1){
+    state.pet.secretClues.dawnTrack = 2;
+    lines.push({l:'🌅 神秘档案', v:'+1 残片', c:'vi'});
+  }
+  save(); render();
+  showReward('🏃 跑步完成', lines);
+}
+
+function inviteJason(){
+  if(state.social.invitedJason) return;
+  state.social.invitedJason = true;
+  save(); render();
+  showReward('💌 邀请已发送', [
+    {l:'👤 邀请', v:'已发送 → Jason', c:'up'},
+    {l:'⊕ 羁绊', v:'2/3 等待回应', c:'vi'},
+    {l:'💡', v:'好友接受后可继续', c:'cy'}
+  ]);
+}
+
+function openRoleFullscreen(){
+  $('modal-body').innerHTML = `
+    <div class="handle"></div>
+    <span class="modal-tag">🎮 校园角色成长系统</span>
+    <h2>角色成长全景</h2>
+    <div style="margin:0 -18px 12px;border-radius:0;overflow:hidden;border-top:1px solid rgba(56,189,248,.3);border-bottom:1px solid rgba(56,189,248,.3);">
+      <img src="主角成长系统.png" style="width:100%;display:block;" alt="角色成长系统"/>
+    </div>
+    <div class="modal-desc">
+      <b style="color:var(--cy-1)">初始状态：</b>普通学生形态，开启校园运动冒险。<br>
+      <b style="color:var(--cy-1)">成长核心：</b>由真实运动行为驱动 —— 有氧主导 / 力量主导 / 均衡发展 / 持续坚持 / 社交协作。<br>
+      <b style="color:var(--cy-1)">三大成长路径：</b>迅刃先锋（机动）· 破阵强袭（力量）· 共鸣统御（均衡）。
+    </div>
+    <button class="modal-2nd" onclick="closeModal()">关闭</button>`;
+  $('mask').classList.add('show');
+}
+
+function openEvoFullscreen(){
+  $('modal-body').innerHTML = `
+    <div class="handle"></div>
+    <span class="modal-tag">🌟 进化系统全景</span>
+    <h2>校园灵兽 · 进化系统</h2>
+    <div style="margin:0 -18px 12px;border-radius:0;overflow:hidden;border-top:1px solid rgba(56,189,248,.3);border-bottom:1px solid rgba(56,189,248,.3);">
+      <img src="宠物进化演示.png" style="width:100%;display:block;" alt="进化系统"/>
+    </div>
+    <div class="modal-desc">
+      初始形态「团团兽」在你持续训练后，会向三大主形态之一进化：<br>
+      <b style="color:var(--cy-1)">⚡ 疾风形态</b> · 有氧主导<br>
+      <b style="color:var(--gold)">⚙️ 重装形态</b> · 力量主导<br>
+      <b style="color:#C084FC">✨ 混合形态</b> · 均衡发展
+    </div>
+    <button class="modal-2nd" onclick="closeModal()">关闭</button>`;
+  $('mask').classList.add('show');
+}
+
+function showEvoForm(form){
+  const data = {
+    wind:{
+      title:'疾风形态', tagCls:'', icon:'⚡',
+      desc:'由有氧主导的训练习惯塑形而成。脚步如风，电光环绕，适合速度型作战与远距离探索。',
+      gain:['速度↑↑','机动↑↑','耐力↑'],
+      need:'最近 14 天有氧占比 > 50%，且力量训练 ≥ 1 次（避免完全偏科）。',
+      unlock:'专属技能 · 闪电步\n外观变化 · 风纹外甲\n属性提升 · 速度全段加成'
+    },
+    iron:{
+      title:'重装形态', tagCls:'gold', icon:'⚙️',
+      desc:'由力量训练主导塑形而成。重装机甲缠身，破阵强袭，适合正面突破与高难度 Boss 战。',
+      gain:['力量↑↑','稳定↑↑','破防↑'],
+      need:'最近 14 天无氧占比 > 50%，且基础有氧 ≥ 1 次。',
+      unlock:'专属技能 · 破阵震击\n外观变化 · 钢甲护体\n属性提升 · 力量与稳定加成'
+    },
+    hybrid:{
+      title:'混合形态', tagCls:'violet', icon:'✨',
+      desc:'由长期均衡的有氧 + 无氧训练塑形而成。星河共鸣，全面进化，适合任何场景。',
+      gain:['速度↑','力量↑','耐力↑','共鸣↑','全面提升'],
+      need:'连续 2 周保持有氧 / 无氧均衡（35–55%），并参与一次阵营挑战。',
+      unlock:'专属技能 · 共鸣统御\n外观变化 · 星河外观\n属性提升 · 全属性加成'
+    }
+  }[form];
+  $('modal-body').innerHTML = `
+    <div class="handle"></div>
+    <span class="modal-tag ${data.tagCls}">进化形态</span>
+    <h2>${data.icon} ${data.title}</h2>
+    <div class="modal-desc">${data.desc}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px;">
+      ${data.gain.map(s=>`<span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;background:rgba(56,189,248,.15);color:var(--cy-1);border:1px solid rgba(56,189,248,.3);">${s}</span>`).join('')}
+    </div>
+    <div style="font-size:11.5px;color:var(--t-2);padding:10px 12px;background:rgba(56,189,248,.06);border-radius:10px;line-height:1.6;margin-bottom:10px;">
+      <b style="color:var(--cy-1);">触发条件：</b><br>${data.need}
+    </div>
+    <div style="font-size:11.5px;color:var(--t-2);padding:10px 12px;background:rgba(255,255,255,.04);border-radius:10px;line-height:1.7;white-space:pre-line;">
+      <b style="color:var(--cy-1);">解锁内容：</b>\n${data.unlock}
+    </div>
+    <button class="modal-2nd" style="margin-top:14px" onclick="closeModal()">关闭</button>`;
+  $('mask').classList.add('show');
+}
+
+function showGrowthPath(path){
+  const data = {
+    wind:{
+      title:'迅刃先锋', tag:'机动成长 · 有氧运动主导', tagCls:'',
+      icon:'🌪️', color:'cyan',
+      desc:'由跑步、骑行、球类等有氧主导训练塑形。轻型战甲与风压武器适合速度型作战。',
+      stats:['速度↑↑','机动↑↑','耐力↑'],
+      unlocks:'· 轻型战斗服\n· 风压武器\n· 位移特效',
+      next:'继续保持有氧主导，推进至 Lv.10 解锁第一阶进化。'
+    },
+    iron:{
+      title:'破阵强袭', tag:'力量成长 · 力量训练主导', tagCls:'gold',
+      icon:'⚙️', color:'gold',
+      desc:'由举铁、卧推、深蹲、自重训练等无氧主导训练塑形。重型装甲与破阵武器适合正面突破。',
+      stats:['力量↑↑','稳定↑↑','破防↑'],
+      unlocks:'· 重型装甲\n· 破阵武器\n· 强袭特效',
+      next:'下一次力量训练后将获得「破阵」前置任务。'
+    },
+    hybrid:{
+      title:'共鸣统御', tag:'均衡成长 · 有氧无氧均衡', tagCls:'violet',
+      icon:'✨', color:'violet',
+      desc:'由长期均衡的有氧与无氧训练塑形。高阶共鸣套装解锁全形态切换与终阶武器。',
+      stats:['速度↑','力量↑','耐力↑','共鸣↑','全面提升'],
+      unlocks:'· 高阶共鸣套装\n· 终阶武器\n· 全面战斗特效',
+      next:'保持每周有氧:无氧 ≈ 1:1，连续 4 周可触发共鸣觉醒。'
+    }
+  }[path];
+  $('modal-body').innerHTML = `
+    <div class="handle"></div>
+    <span class="modal-tag ${data.tagCls}">${data.tag}</span>
+    <h2>${data.icon} ${data.title}</h2>
+    <div class="modal-desc">${data.desc}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px;">
+      ${data.stats.map(s=>`<span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;background:rgba(56,189,248,.15);color:var(--cy-1);border:1px solid rgba(56,189,248,.3);">${s}</span>`).join('')}
+    </div>
+    <div style="font-size:11.5px;color:var(--t-2);padding:10px 12px;background:rgba(255,255,255,.04);border-radius:10px;line-height:1.7;white-space:pre-line;">
+      <b style="color:var(--cy-1);">解锁内容：</b>\n${data.unlocks}
+    </div>
+    <div style="font-size:11.5px;color:var(--t-2);padding:10px 12px;background:rgba(56,189,248,.08);border-radius:10px;line-height:1.6;margin-top:10px;">
+      <b style="color:var(--cy-1);">下一步：</b><br>${data.next}
+    </div>
+    <button class="modal-2nd" style="margin-top:14px" onclick="closeModal()">关闭</button>`;
+  $('mask').classList.add('show');
+}
+
+function trainPet(){
+  if(state.resources.energy < 120){
+    showToast('🔥 热量能量不足（需 120）· 先去跑步获取');
+    return;
+  }
+  state.resources.energy -= 120;
+  state.resources.bondLevel = Math.min(20, state.resources.bondLevel + 1);
+  state.user.fatigue = Math.min(100, state.user.fatigue + 4);
+  save(); render();
+  showReward('💪 训练宠物完成', [
+    {l:'🔥 热量能量', v:'-120', c:'dn'},
+    {l:'💞 羁绊值', v:`Lv +1 → ${state.resources.bondLevel}`, c:'gd'},
+    {l:'🦊 主宠状态', v:'更亲近你了', c:'cy'},
+    {l:'😓 疲劳值', v:'+4', c:'dn'}
+  ]);
+}
+
+function previewEvolution(){
+  if(state.resources.energy < 200 || state.resources.powerCore < 2){
+    showToast('🔮 进化预览需要 200 热量 + 2 力量核心');
+    return;
+  }
+  $('modal-body').innerHTML = `
+    <div class="handle"></div>
+    <span class="modal-tag violet">🔮 进化预览</span>
+    <h2>预览进化路径</h2>
+    <div class="modal-desc">基于当前训练习惯，模拟主宠未来的进化方向。预览不会真正进化，仅消耗资源生成视觉演算。</div>
+    <div class="rew-grid">
+      <div class="rew-i">🌪️ 疾风形态可能性高</div>
+      <div class="rew-i">⚙️ 重装形态需补无氧</div>
+      <div class="rew-i">✨ 混合形态需均衡训练</div>
+      <div class="rew-i">🔥 消耗：热量 −200 · 力量核心 −2</div>
+    </div>
+    <button class="modal-cta violet" onclick="confirmPreview()">确认消耗资源预览</button>
+    <button class="modal-2nd" onclick="closeModal()">取消</button>`;
+  $('mask').classList.add('show');
+}
+
+function confirmPreview(){
+  closeModal();
+  state.resources.energy -= 200;
+  state.resources.powerCore -= 2;
+  save(); render();
+  showReward('🔮 进化预览', [
+    {l:'🌪️ 主导路径', v:'疾风形态', c:'cy'},
+    {l:'📊 当前倾向', v:`${state.pet.evolution.wind}% / ${state.pet.evolution.iron}% / ${state.pet.evolution.hybrid}%`, c:'cy'},
+    {l:'🔥 热量能量', v:'-200', c:'dn'},
+    {l:'⚡ 力量核心', v:'-2', c:'dn'},
+    {l:'💡', v:'继续训练即可触发真实进化', c:'gd'}
+  ]);
+}
+
+function selectPet(idx){
+  const p = PETS_DATA[idx];
+  const portrait = $('pd-em');
+  if(p.img){
+    portrait.classList.add('img');
+    portrait.style.backgroundImage = `url('${p.img}')`;
+    portrait.textContent = '';
+  } else {
+    portrait.classList.remove('img');
+    portrait.style.backgroundImage = '';
+    portrait.textContent = p.emoji || '';
+  }
+  $('pd-n').textContent = p.name;
+  $('pd-meta').textContent = `Lv.${p.lv} · ${p.isMain?'主宠':'伙伴'} · 倾向：${p.tend}`;
+  $('pd-bond').textContent = p.bond;
+  showToast('已选中 '+p.name);
+}
+
+function resetDemo(){
+  if(!confirm('重置 Demo 演示状态？')) return;
+  state = JSON.parse(JSON.stringify(INITIAL));
+  save(); render();
+  document.getElementById('encounter-banner').style.display = '';
+  showToast('已重置');
+  switchTab('role');
+}
+
+function showToast(text){
+  const t = $('toast'); t.textContent = text; t.classList.add('show');
+  clearTimeout(t._tm); t._tm = setTimeout(()=>t.classList.remove('show'), 2500);
+}
+function showReward(title, lines){
+  $('rp-title').textContent = title;
+  $('rp-list').innerHTML = lines.map(x=>`<div class="rp-line ${x.c||''}"><span>${x.l}</span><span class="v">${x.v}</span></div>`).join('');
+  $('rewardpop').classList.add('show');
+}
+function closeReward(){ $('rewardpop').classList.remove('show'); }
+
+load(); render();
+setTimeout(()=>{ if(!state.flags.powerWorkoutDone) showToast('💡 试试切到「探索」Tab 查看实景地图与野生宠物'); }, 1400);
+</script>
+</body>
+</html>
