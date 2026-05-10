@@ -86,13 +86,6 @@ cd fitventure-demo
 
 ---
 
-## 📖 文档
-
-- [PRD v1.3](fitventure_school_mvp_prd_v1_2_merged.md)
-- [Demo Prompt v3.1](fitventure_html_demo_prompt_cn_v3_github.md)
-
----
-
 ## ⚖️ 声明
 
 本作品为通用校园产品原型，使用通用建筑名称（健身房 / 图书馆 / 足球场 / 宿舍区 / 篮球场），与任何具体高校无商业合作关系。
