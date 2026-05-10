@@ -4,7 +4,7 @@
 
 ![游戏主宣传图](游戏主宣传图.png)
 
-🔗 **在线 Demo**：https://CU2403.github.io/fitventure-demo/
+🔗 **在线 Demo**：https://CU2403.github.io/fitventure/
 
 ---
 
