@@ -4,9 +4,15 @@
 
 ![游戏主宣传图](游戏主宣传图.png)
 
-🔗 **在线 Demo**：https://CU2403.github.io/fitventure/
-
 ---
+
+## 🚀 本地运行
+
+```bash
+git clone https://github.com/你的用户名/fitventure-demo.git
+cd fitventure-demo
+# 直接浏览器打开 fitventure.html，或部署到 GitHub Pages
+```
 
 ## 🎯 核心玩法
 
@@ -67,14 +73,6 @@
 5. 切到 **好友** —— 邀请 Jason 共鸣，推进双生羁绊形态
 
 ---
-
-## 🚀 本地运行
-
-```bash
-git clone https://github.com/你的用户名/fitventure-demo.git
-cd fitventure-demo
-# 直接浏览器打开 fitventure.html，或部署到 GitHub Pages
-```
 
 ---
 
